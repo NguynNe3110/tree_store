@@ -8,7 +8,6 @@ extension UserResponseMapper on UserResponseDto {
         email: email,
         phoneNumber: phoneNumber,
         avatarUrl: avatarUrl,
-        role: role,
         createdAt: _parseDate(createdAt),
         updatedAt: _parseDate(updatedAt),
       );
