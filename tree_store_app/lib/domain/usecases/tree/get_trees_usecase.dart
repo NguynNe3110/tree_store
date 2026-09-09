@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import '../../../core/error/failures.dart';
-import '../../entities/tree.dart';
+import '../../entities/product.dart';
 import '../../repositories/tree_repository.dart';
 
 class GetTreesParams extends Equatable {
@@ -26,7 +26,7 @@ class GetTreesUsecase {
   final TreeRepository _repo;
   const GetTreesUsecase(this._repo);
 
-  Future<Either<Failure, List<Tree>>> call(GetTreesParams params) =>
+  Future<Either<Failure, List<Product>>> call(GetTreesParams params) =>
       _repo.getTrees(
         categoryId: params.categoryId,
         keyword: params.keyword,
