@@ -37,23 +37,23 @@ class OrderResponseDto {
     final raw = (json['items'] as List?) ?? const [];
     return OrderResponseDto(
       id: json['id']?.toString() ?? '',
-      userId: json['user_id'] as String?,
-      customerName: json['customer_name']?.toString() ?? '',
-      phoneNumber: json['phone_number']?.toString() ?? '',
-      addressLine: json['address_line'] as String?,
+      userId: json['userId'] as String?,
+      customerName: json['customerName']?.toString() ?? '',
+      phoneNumber: json['phoneNumber']?.toString() ?? '',
+      addressLine: json['addressLine'] as String?,
       note: json['note'] as String?,
       status: json['status']?.toString() ?? 'pending',
-      paymentStatus: json['payment_status']?.toString() ?? 'unpaid',
-      subtotalPrice: (json['subtotal_price'] as num?)?.toDouble() ?? 0,
-      discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
-      shippingFee: (json['shipping_fee'] as num?)?.toDouble() ?? 0,
-      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
+      paymentStatus: json['paymentStatus']?.toString() ?? 'unpaid',
+      subtotalPrice: (json['subtotalPrice'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0,
+      shippingFee: (json['shippingFee'] as num?)?.toDouble() ?? 0,
+      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0,
       items: raw
           .whereType<Map<String, dynamic>>()
           .map(OrderItemResponseDto.fromJson)
           .toList(),
-      createdAt: json['created_at'] as String?,
-      updatedAt: json['updated_at'] as String?,
+      createdAt: json['createdAt'] as String?,
+      updatedAt: json['updatedAt'] as String?,
     );
   }
 }
@@ -84,15 +84,15 @@ class OrderItemResponseDto {
   factory OrderItemResponseDto.fromJson(Map<String, dynamic> json) =>
       OrderItemResponseDto(
         id: json['id']?.toString() ?? '',
-        orderId: json['order_id']?.toString() ?? '',
-        treeId: json['tree_id'] as String?,
-        treeNameSnapshot: json['tree_name_snapshot']?.toString() ?? '',
+        orderId: json['orderId']?.toString() ?? '',
+        treeId: json['treeId'] as String?,
+        treeNameSnapshot: json['treeNameSnapshot']?.toString() ?? '',
         unitPriceSnapshot:
-            (json['unit_price_snapshot'] as num?)?.toDouble() ?? 0,
+            (json['unitPriceSnapshot'] as num?)?.toDouble() ?? 0,
         quantity: (json['quantity'] as num?)?.toInt() ?? 1,
-        lineTotal: (json['line_total'] as num?)?.toDouble() ?? 0,
-        imageUrlSnapshot: json['image_url_snapshot'] as String?,
+        lineTotal: (json['lineTotal'] as num?)?.toDouble() ?? 0,
+        imageUrlSnapshot: json['imageUrlSnapshot'] as String?,
         specsSnapshot:
-            (json['specs_snapshot'] as Map?)?.cast<String, dynamic>() ?? {},
+            (json['specsSnapshot'] as Map?)?.cast<String, dynamic>() ?? {},
       );
 }

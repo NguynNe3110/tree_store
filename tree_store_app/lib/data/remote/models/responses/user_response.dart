@@ -21,12 +21,12 @@ class UserResponseDto {
 
   factory UserResponseDto.fromJson(Map<String, dynamic> json) => UserResponseDto(
         id: json['id']?.toString() ?? '',
-        fullName: json['full_name']?.toString() ?? '',
+        fullName: json['fullName']?.toString() ?? '',
         email: json['email'] as String?,
-        phoneNumber: json['phone_number'] as String?,
-        avatarUrl: json['avatar_url'] as String?,
+        phoneNumber: json['phoneNumber'] as String?,
+        avatarUrl: json['avatarUrl'] as String?,
         role: json['role']?.toString() ?? 'customer',
-        createdAt: json['created_at'] as String?,
-        updatedAt: json['updated_at'] as String?,
+        createdAt: json['createdAt'] as String?,
+        updatedAt: json['updatedAt'] as String?,
       );
 }

@@ -20,8 +20,8 @@ class CategoryResponseDto {
         id: json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         description: json['description'] as String?,
-        imageUrl: json['image_url'] as String?,
-        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
-        isActive: json['is_active'] as bool? ?? true,
+        imageUrl: json['imageUrl'] as String?,
+        sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+        isActive: json['isActive'] as bool? ?? true,
       );
 }

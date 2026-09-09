@@ -3,7 +3,7 @@ class OrderItemRequestDto {
   final int quantity;
   const OrderItemRequestDto({required this.treeId, required this.quantity});
 
-  Map<String, dynamic> toJson() => {'tree_id': treeId, 'quantity': quantity};
+  Map<String, dynamic> toJson() => {'treeId': treeId, 'quantity': quantity};
 }
 
 class CreateOrderRequestDto {
@@ -27,13 +27,13 @@ class CreateOrderRequestDto {
   });
 
   Map<String, dynamic> toJson() => {
-        'customer_name': customerName,
-        'phone_number': phoneNumber,
-        'address_line': addressLine,
+        'customerName': customerName,
+        'phoneNumber': phoneNumber,
+        'addressLine': addressLine,
         if (note != null) 'note': note,
         'items': items.map((e) => e.toJson()).toList(),
-        'payment_method': paymentMethod,
-        'shipping_fee': shippingFee,
-        'discount_amount': discountAmount,
+        'paymentMethod': paymentMethod,
+        'shippingFee': shippingFee,
+        'discountAmount': discountAmount,
       };
 }
