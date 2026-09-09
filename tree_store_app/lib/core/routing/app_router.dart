@@ -1,0 +1,66 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../presentation/screens/auth/forgot_password_screen.dart';
+import '../../presentation/screens/auth/login_screen.dart';
+import '../../presentation/screens/auth/otp_screen.dart';
+import '../../presentation/screens/auth/register_screen.dart';
+import '../../presentation/screens/main_shell.dart';
+import '../../presentation/screens/home/home_screen.dart';
+import '../../presentation/screens/search/search_screen.dart';
+import '../../presentation/screens/product/product_detail_screen.dart';
+import '../../presentation/screens/cart/cart_screen.dart';
+import '../../presentation/screens/checkout/checkout_screen.dart';
+import '../../presentation/screens/checkout/order_success_screen.dart';
+import '../../presentation/screens/order/order_history_screen.dart';
+import '../../presentation/screens/order/order_detail_screen.dart';
+import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/profile/edit_profile_screen.dart';
+import '../../presentation/screens/profile/address_list_screen.dart';
+import '../../presentation/screens/profile/add_address_screen.dart';
+import '../network/token_storage.dart';
+
+// ponytail: simple sync flag for auth guard. upgrade to stream/BLoC when real auth state needed
+bool isAuthenticated = false;
+
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
+
+GoRouter createRouter(TokenStorage tokenStorage) {
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/home',
+    redirect: (context, state) async {
+      final token = await tokenStorage.getAccessToken();
+      final loggedIn = token != null && token.isNotEmpty;
+      isAuthenticated = loggedIn;
+      final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      if (!loggedIn && !isAuthRoute) return '/login';
+      if (loggedIn && isAuthRoute) return '/home';
+      return null;
+    },
+    routes: [
+      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: '/otp', builder: (_, s) => OtpScreen(email: s.uri.queryParameters['email'] ?? '', purpose: s.uri.queryParameters['purpose'] ?? 'register')),
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (_, state, child) => MainShell(child: child),
+        routes: [
+          GoRoute(path: '/home', pageBuilder: (_, __) => const NoTransitionPage(child: HomeScreen())),
+          GoRoute(path: '/search', pageBuilder: (_, __) => const NoTransitionPage(child: SearchScreen())),
+          GoRoute(path: '/cart', pageBuilder: (_, __) => const NoTransitionPage(child: CartScreen())),
+          GoRoute(path: '/profile', pageBuilder: (_, __) => const NoTransitionPage(child: ProfileScreen())),
+        ],
+      ),
+      GoRoute(path: '/product/:id', builder: (_, s) => ProductDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/checkout', builder: (_, __) => const CheckoutScreen()),
+      GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessScreen()),
+      GoRoute(path: '/orders', builder: (_, __) => const OrderHistoryScreen()),
+      GoRoute(path: '/order/:id', builder: (_, s) => OrderDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
+      GoRoute(path: '/addresses', builder: (_, __) => const AddressListScreen()),
+      GoRoute(path: '/add-address', builder: (_, __) => const AddAddressScreen()),
+    ],
+  );
+}
