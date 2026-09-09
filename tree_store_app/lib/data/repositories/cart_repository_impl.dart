@@ -1,33 +1,19 @@
-import 'package:dartz/dartz.dart';
+﻿import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import '../../core/error/failures.dart';
-import '../../domain/entities/category.dart';
-import '../../domain/entities/product.dart';
-import '../../domain/repositories/tree_repository.dart';
-import '../mappers/category_mapper.dart';
-import '../mappers/tree_mapper.dart';
-import '../remote/datasources/tree_remote_datasource.dart';
+import '../../domain/entities/cart_item.dart';
+import '../../domain/repositories/cart_repository.dart';
+import '../mappers/cart_mapper.dart';
+import '../remote/datasources/cart_remote_datasource.dart';
 
-class TreeRepositoryImpl implements TreeRepository {
-  final TreeRemoteDataSource _remote;
-  TreeRepositoryImpl(this._remote);
+class CartRepositoryImpl implements CartRepository {
+  final CartRemoteDataSource _remote;
+  CartRepositoryImpl(this._remote);
 
   @override
-  Future<Either<Failure, List<Product>>> getTrees({
-    String? categoryId,
-    String? keyword,
-    String? status,
-    int page = 1,
-    int limit = 20,
-  }) async {
+  Future<Either<Failure, List<CartItem>>> getCart() async {
     try {
-      final dtos = await _remote.getTrees(
-        categoryId: categoryId,
-        keyword: keyword,
-        status: status,
-        page: page,
-        limit: limit,
-      );
+      final dtos = await _remote.getCart();
       return Right(dtos.map((d) => d.toEntity()).toList());
     } on DioException catch (e) {
       return Left(_mapDioError(e));
@@ -37,10 +23,10 @@ class TreeRepositoryImpl implements TreeRepository {
   }
 
   @override
-  Future<Either<Failure, Product>> getTreeDetail(String id) async {
+  Future<Either<Failure, void>> addToCart({required String treeId, int quantity = 1, String? note}) async {
     try {
-      final dto = await _remote.getTreeDetail(id);
-      return Right(dto.toEntity());
+      await _remote.addToCart(treeId: treeId, quantity: quantity, note: note);
+      return const Right(null);
     } on DioException catch (e) {
       return Left(_mapDioError(e));
     } catch (e) {
@@ -49,10 +35,10 @@ class TreeRepositoryImpl implements TreeRepository {
   }
 
   @override
-  Future<Either<Failure, List<Category>>> getCategories() async {
+  Future<Either<Failure, void>> removeFromCart(String id) async {
     try {
-      final dtos = await _remote.getCategories();
-      return Right(dtos.map((d) => d.toEntity()).toList());
+      await _remote.removeFromCart(id);
+      return const Right(null);
     } on DioException catch (e) {
       return Left(_mapDioError(e));
     } catch (e) {
@@ -70,6 +56,9 @@ Failure _mapDioError(DioException e) {
       return const NetworkFailure();
     case DioExceptionType.badResponse:
       final code = e.response?.statusCode ?? 0;
+      if (code == 401 || code == 403) {
+        return AuthFailure(e.response?.data?['message']?.toString() ?? 'Auth failed');
+      }
       return ServerFailure(e.response?.data?['message']?.toString() ?? 'Server error $code');
     default:
       return ServerFailure(e.message ?? 'Unknown error');

@@ -1,10 +1,10 @@
 import 'package:dartz/dartz.dart';
 import '../../core/error/failures.dart';
 import '../entities/category.dart';
-import '../entities/tree.dart';
+import '../entities/product.dart';
 
 abstract class TreeRepository {
-  Future<Either<Failure, List<Tree>>> getTrees({
+  Future<Either<Failure, List<Product>>> getTrees({
     String? categoryId,
     String? keyword,
     String? status,
@@ -12,7 +12,7 @@ abstract class TreeRepository {
     int limit = 20,
   });
 
-  Future<Either<Failure, Tree>> getTreeDetail(String id);
+  Future<Either<Failure, Product>> getTreeDetail(String id);
 
   Future<Either<Failure, List<Category>>> getCategories();
 }
