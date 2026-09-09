@@ -6,13 +6,13 @@ extension OrderItemResponseMapper on OrderItemResponseDto {
   OrderItem toEntity() => OrderItem(
         id: id,
         orderId: orderId,
-        treeId: treeId,
-        treeNameSnapshot: treeNameSnapshot,
-        unitPriceSnapshot: unitPriceSnapshot,
+        productId: treeId,
+        productNameSnapshot: treeNameSnapshot,
+        priceSnapshot: unitPriceSnapshot,
         quantity: quantity,
         lineTotal: lineTotal,
         imageUrlSnapshot: imageUrlSnapshot,
-        specsSnapshot: specsSnapshot,
+        optionsSnapshot: specsSnapshot,
       );
 }
 
@@ -20,7 +20,7 @@ extension OrderResponseMapper on OrderResponseDto {
   Order toEntity() => Order(
         id: id,
         userId: userId,
-        customerName: customerName,
+        receiverName: customerName,
         phoneNumber: phoneNumber,
         addressLine: addressLine,
         note: note,
