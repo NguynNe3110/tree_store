@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
-import '../../core/error/failures.dart';
-import '../../data/remote/models/responses/home_response.dart';
-import '../repositories/home_repository.dart';
+import 'package:tree_store/core/error/failures.dart';
+import 'package:tree_store/data/remote/models/responses/home_response.dart';
+import 'package:tree_store/domain/repositories/home_repository.dart';
 
 class GetHomeBlocksUsecase {
   final HomeRepository _repository;

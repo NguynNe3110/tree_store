@@ -1,4 +1,5 @@
-﻿import 'package:flutter_bloc/flutter_bloc.dart';
+﻿import 'package:flutter/cupertino.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../core/network/token_storage.dart';
 import '../../domain/entities/user.dart';
@@ -38,6 +39,12 @@ class AuthRegister extends AuthEvent {
 
 class AuthLogout extends AuthEvent {
   const AuthLogout();
+  @override
+  List<Object?> get props => [];
+}
+
+class AuthMockLogin extends AuthEvent {
+  const AuthMockLogin();
   @override
   List<Object?> get props => [];
 }
@@ -103,6 +110,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogin>(_onLogin);
     on<AuthRegister>(_onRegister);
     on<AuthLogout>(_onLogout);
+    on<AuthMockLogin>(_onMockLogin);
+  }
+
+  Future<void> _onMockLogin(AuthMockLogin event, Emitter<AuthState> emit) async {
+    // ponytail: hardcoded mock user, replace with real auth when backend ready
+    debugPrint('[DEBUG] AuthMockLogin event received');
+    await _tokenStorage.saveTokens('mock-token', '');
+    emit(const AuthAuthenticated(User(id: 'mock-1', fullName: 'Mock User', email: 'mock@verdant.vn')));
+    debugPrint('[DEBUG] AuthAuthenticated emitted');
   }
 
   Future<void> _onCheckToken(AuthCheckToken event, Emitter<AuthState> emit) async {

@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
-import '../../core/error/failures.dart';
-import '../repositories/auth_repository.dart';
+import 'package:tree_store/core/error/failures.dart';
+import 'package:tree_store/domain/repositories/auth_repository.dart';
 
 class SendOtpUsecase {
   final AuthRepository _repository;

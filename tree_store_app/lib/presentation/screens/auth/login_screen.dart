@@ -19,6 +19,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextButton(
+            onPressed: () {
+              debugPrint('[DEBUG] Mock Login button pressed');
+              context.read<AuthBloc>().add(const AuthMockLogin());
+            },
+            child: const Text('Mock Login', style: TextStyle(color: AppColors.muted)),
+          ),
+        ),
+      ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
