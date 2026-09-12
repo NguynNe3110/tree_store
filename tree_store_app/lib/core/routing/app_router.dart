@@ -55,7 +55,7 @@ GoRouter createRouter(TokenStorage tokenStorage) {
       ),
       GoRoute(path: '/product/:id', builder: (_, s) => ProductDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/checkout', builder: (_, __) => const CheckoutScreen()),
-      GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessScreen()),
+      GoRoute(path: '/order-success', builder: (_, s) => OrderSuccessScreen(orderId: s.uri.queryParameters['id'] ?? '')),
       GoRoute(path: '/orders', builder: (_, __) => const OrderHistoryScreen()),
       GoRoute(path: '/order/:id', builder: (_, s) => OrderDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),

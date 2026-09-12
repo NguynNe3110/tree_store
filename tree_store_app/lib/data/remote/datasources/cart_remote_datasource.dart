@@ -1,4 +1,5 @@
 ﻿import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../models/responses/cart_response.dart';
 
@@ -8,6 +9,7 @@ class CartRemoteDataSource {
 
   Future<List<CartItemResponseDto>> getCart() async {
     final res = await _dio.get(ApiEndpoints.cart);
+    debugPrint('[DEBUG] cart raw response: ${res.data}');
     final raw = (res.data as List?) ?? const [];
     return raw.whereType<Map<String, dynamic>>().map(CartItemResponseDto.fromJson).toList();
   }

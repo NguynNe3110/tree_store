@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/image_url.dart';
-import '../../../domain/entities/product.dart';
+import '../../blocs/cart_bloc.dart';
 import '../../blocs/tree_bloc.dart';
 import '../../widgets/primary_button.dart';
 
@@ -16,6 +16,8 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  int _quantity = 1;
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +66,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 expandedHeight: 380,
                 pinned: true,
                 leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => context.pop()),
-                actions: [IconButton(icon: const Icon(Icons.favorite_border, color: Colors.white), onPressed: () {})],
                 flexibleSpace: FlexibleSpaceBar(
                   background: heroImg.isEmpty
                       ? Container(color: AppColors.green50, child: const Center(child: Icon(Icons.eco, size: 80, color: AppColors.green700)))
@@ -102,6 +103,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           Text(_formatPrice(tree.price), style: const TextStyle(fontSize: 16, color: AppColors.muted, decoration: TextDecoration.lineThrough)),
                         ],
                       ]),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Text('Số lượng', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink)),
+                          const Spacer(),
+                          Container(
+                            decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(20)),
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                                  icon: const Icon(Icons.remove, size: 18),
+                                  color: AppColors.green700,
+                                ),
+                                Text('$_quantity', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                                IconButton(
+                                  onPressed: _quantity < tree.stockQuantity ? () => setState(() => _quantity++) : null,
+                                  icon: const Icon(Icons.add, size: 18),
+                                  color: AppColors.green700,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 20),
                       const Text('Mô tả', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink)),
                       const SizedBox(height: 8),
@@ -124,9 +150,46 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             decoration: const BoxDecoration(color: AppColors.paper, border: Border(top: BorderSide(color: AppColors.line))),
             child: Row(
               children: [
-                Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.shopping_cart_outlined, color: AppColors.green700)),
-                const SizedBox(width: 12),
-                Expanded(child: PrimaryButton(label: 'Mua ngay · ${_formatPrice(tree.finalPrice)}', onPressed: () => context.push('/checkout'))),
+                GestureDetector(
+                  onTap: () => context.go('/cart'),
+                  child: Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.shopping_cart_outlined, color: AppColors.green700)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SizedBox(
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        context.read<CartBloc>().add(CartAdd(tree.id, _quantity));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Đã thêm vào giỏ hàng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                            backgroundColor: AppColors.green700,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.all(16),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.green700),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text('Thêm vào giỏ', style: TextStyle(color: AppColors.green700, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Mua ngay',
+                    onPressed: () {
+                      context.read<CartBloc>().add(CartAdd(tree.id, _quantity));
+                      context.push('/checkout');
+                    },
+                  ),
+                ),
               ],
             ),
           );

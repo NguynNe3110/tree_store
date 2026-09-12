@@ -11,6 +11,7 @@ import 'presentation/blocs/cart_bloc.dart';
 import 'presentation/blocs/home_bloc.dart';
 import 'presentation/blocs/order_bloc.dart';
 import 'presentation/blocs/profile_bloc.dart';
+import 'presentation/blocs/search_bloc.dart';
 import 'presentation/blocs/tree_bloc.dart';
 
 void main() async {
@@ -45,6 +46,9 @@ class VerdantApp extends StatelessWidget {
         ),
         BlocProvider<TreeBloc>(
           create: (_) => di.sl<TreeBloc>(),
+        ),
+        BlocProvider<SearchBloc>(
+          create: (_) => di.sl<SearchBloc>(),
         ),
       ],
       child: MaterialApp.router(

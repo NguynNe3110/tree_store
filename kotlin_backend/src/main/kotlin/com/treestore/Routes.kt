@@ -274,7 +274,32 @@ fun Route.cartRoutes() {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val items = transaction {
                     CartItems.selectAll().where { CartItems.userId eq userId }.map { row ->
-                        CartItemDto(row[CartItems.id].toString(), row[CartItems.treeId].toString(), row[CartItems.quantity], row[CartItems.note])
+                        val treeId = row[CartItems.treeId]
+                        val treeRow = Trees.selectAll().where { Trees.id eq treeId }.singleOrNull()
+                        val treeDto = treeRow?.let { tr ->
+                            val images = TreeImages.selectAll().where { TreeImages.treeId eq treeId }
+                                .orderBy(TreeImages.sortOrder to SortOrder.ASC).map { img ->
+                                    TreeImageDto(img[TreeImages.id].toString(), img[TreeImages.imageUrl], img[TreeImages.alt], img[TreeImages.isCover], img[TreeImages.sortOrder])
+                                }
+                            TreeDto(
+                                id = tr[Trees.id].toString(), name = tr[Trees.name],
+                                description = tr[Trees.description], categoryId = tr[Trees.categoryId]?.toString(),
+                                price = tr[Trees.price].toDouble(), discountPrice = tr[Trees.discountPrice]?.toDouble(),
+                                stockQuantity = tr[Trees.stockQuantity], status = tr[Trees.status],
+                                heightCm = tr[Trees.heightCm], potDiameterCm = tr[Trees.potDiameterCm],
+                                trunkDiameterCm = tr[Trees.trunkDiameterCm], ageYears = tr[Trees.ageYears],
+                                location = tr[Trees.location], careNote = tr[Trees.careNote],
+                                tags = emptyList(), coverImageUrl = tr[Trees.coverImageUrl],
+                                isFeatured = tr[Trees.isFeatured], isActive = tr[Trees.isActive], images = images
+                            )
+                        }
+                        CartItemDto(
+                            id = row[CartItems.id].toString(),
+                            treeId = treeId.toString(),
+                            quantity = row[CartItems.quantity],
+                            note = row[CartItems.note],
+                            tree = treeDto
+                        )
                     }
                 }
                 call.respond(items)

@@ -41,6 +41,7 @@ import '../../presentation/blocs/home_bloc.dart';
 import '../../presentation/blocs/order_bloc.dart';
 import '../../presentation/blocs/otp_bloc.dart';
 import '../../presentation/blocs/profile_bloc.dart';
+import '../../presentation/blocs/search_bloc.dart';
 import '../../presentation/blocs/tree_bloc.dart';
 import '../network/auth_interceptor.dart';
 import '../network/dio_client.dart';
@@ -107,4 +108,5 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => OrderBloc(getOrders: sl(), createOrder: sl()));
   sl.registerFactory(() => ProfileBloc(getProfile: sl(), updateProfile: sl()));
   sl.registerFactory(() => TreeBloc(getTreeDetail: sl()));
+  sl.registerFactory(() => SearchBloc(getTrees: sl()));
 }
