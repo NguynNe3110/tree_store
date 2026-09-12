@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDUI Dashboard - Verdant</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
+.header{background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:700}
+.container{max-width:960px;margin:24px auto;padding:0 16px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;background:#e8f5e9;color:#2e7d32}
+.badge.inactive{background:#ffebee;color:#c62828}
+.btn{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn-primary{background:#2e7d32;color:#fff}
+.btn-danger{background:#c62828;color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+textarea{width:100%;min-height:120px;padding:8px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:13px;resize:vertical}
+input,select{padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+.form-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.form-row label{font-size:13px;font-weight:600;min-width:80px}
+.actions{display:flex;gap:6px}
+.msg{padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
+.msg.ok{display:block;background:#e8f5e9;color:#2e7d32}
+.msg.err{display:block;background:#ffebee;color:#c62828}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:#ccc;border-radius:22px;transition:.2s}
+.toggle .slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.slider{background:#2e7d32}
+.toggle input:checked+.slider:before{transform:translateX(18px)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Verdant SDUI Dashboard</h1>
+<button class="btn btn-primary" onclick="showAddForm()">+ Add Block</button>
+</div>
+<div class="container">
+<div id="msg" class="msg"></div>
+<div id="addForm" class="card" style="display:none">
+<h3 style="margin-bottom:12px;font-size:15px">New Block</h3>
+<div class="form-row"><label>Type</label><select id="newType"><option>banner_carousel</option><option>quick_actions</option><option>flash_sale_strip</option><option>featured_hero</option><option>category_tabs</option><option>product_horizontal_list</option><option>care_tip_card</option><option>product_grid</option><option>bundle_offer</option><option>testimonial</option></select></div>
+<div class="form-row"><label>Title</label><input id="newTitle" placeholder="Optional title"></div>
+<div class="form-row"><label>Sort Order</label><input id="newSort" type="number" value="0" style="width:60px"></div>
+<div class="form-row"><label>Payload JSON</label></div>
+<textarea id="newPayload">{}</textarea>
+<div style="margin-top:8px;display:flex;gap:8px">
+<button class="btn btn-primary" onclick="createBlock()">Save</button>
+<button class="btn" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
+</div>
+</div>
+<div id="blocks"></div>
+</div>
+<script>
+const API='/api/admin/sdui';
+let blocks=[];
+let authUser='',authPass='';
+function authHeaders(){return authUser?{'Authorization':'Basic '+btoa(authUser+':'+authPass)}:{}}
+function ensureAuth(){if(!authUser){authUser=prompt('Admin username:')||'';authPass=prompt('Admin password:')||''}}
+function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');setTimeout(()=>m.className='msg',3000)}
+async function load(){
+ensureAuth();
+try{const r=await fetch(API+'?screenKey=home',{headers:authHeaders()});blocks=await r.json();render()}
+catch(e){showMsg('Failed to load: '+e.message,false)}
+}
+function render(){
+const c=document.getElementById('blocks');
+if(!blocks.length){c.innerHTML='<p style="text-align:center;color:#999;padding:40px">No blocks yet. Click "+ Add Block" to create one.</p>';return}
+c.innerHTML=blocks.map(b=>`
+<div class="card" id="card-${b.id}">
+<div class="card-header">
+<div><span class="badge ${b.isActive?'':'inactive'}">${b.blockType}</span>
+<strong style="margin-left:8px">${b.title||'(no title)'}</strong>
+<span style="color:#999;font-size:12px;margin-left:8px">order: ${b.sortOrder}</span></div>
+<div class="actions">
+<label class="toggle"><input type="checkbox" ${b.isActive?'checked':''} onchange="toggleActive('${b.id}',this.checked)"><span class="slider"></span></label>
+<button class="btn btn-danger btn-sm" onclick="del('${b.id}')">Delete</button>
+</div></div>
+<textarea id="payload-${b.id}">${typeof b.payload==='string'?b.payload:JSON.stringify(b.payload,null,2)}</textarea>
+<div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+<input id="title-${b.id}" value="${b.title||''}" placeholder="Title" style="flex:1">
+<input id="sort-${b.id}" type="number" value="${b.sortOrder}" style="width:60px" title="Sort order">
+<button class="btn btn-primary btn-sm" onclick="save('${b.id}')">Save</button>
+</div></div>`).join('')
+}
+function showAddForm(){document.getElementById('addForm').style.display='block'}
+async function createBlock(){
+const body={blockType:document.getElementById('newType').value,title:document.getElementById('newTitle').value||null,payload:document.getElementById('newPayload').value,sortOrder:parseInt(document.getElementById('newSort').value)||0,isActive:true};
+try{
+JSON.parse(body.payload);
+}catch(e){showMsg('Invalid JSON payload',false);return}
+try{
+const r=await fetch(API,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(r.ok){showMsg('Block created',true);document.getElementById('addForm').style.display='none';load()}
+else{const e=await r.json();showMsg(e.message||'Error',false)}
+}catch(e){showMsg(e.message,false)}
+}
+async function save(id){
+const payload=document.getElementById('payload-'+id).value;
+try{JSON.parse(payload)}catch(e){showMsg('Invalid JSON',false);return}
+const b=blocks.find(x=>x.id===id);
+const body={blockType:b.blockType,title:document.getElementById('title-'+id).value||null,payload,sortOrder:parseInt(document.getElementById('sort-'+id).value)||0,isActive:b.isActive};
+try{
+const r=await fetch(API+'/'+id,{method:'PUT',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(r.ok){showMsg('Saved',true);load()}
+else{const e=await r.json();showMsg(e.message||'Error',false)}
+}catch(e){showMsg(e.message,false)}
+}
+async function del(id){
+if(!confirm('Delete this block?'))return;
+try{
+const r=await fetch(API+'/'+id,{method:'DELETE',headers:authHeaders()});
+if(r.ok){showMsg('Deleted',true);load()}
+else showMsg('Error',false)
+}catch(e){showMsg(e.message,false)}
+}
+async function toggleActive(id,active){
+const b=blocks.find(x=>x.id===id);
+const body={blockType:b.blockType,title:b.title,payload:typeof b.payload==='string'?b.payload:JSON.stringify(b.payload),sortOrder:b.sortOrder,isActive:active};
+try{await fetch(API+'/'+id,{method:'PUT',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});load()}
+catch(e){showMsg(e.message,false)}
+}
+load();
+</script>
+</body>
+</html>

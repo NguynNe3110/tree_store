@@ -131,6 +131,13 @@ data class ProfileDto(
 )
 
 @Serializable
+data class UpdateProfileRequest(
+    val fullName: String? = null,
+    val phoneNumber: String? = null,
+    val avatarUrl: String? = null
+)
+
+@Serializable
 data class AddressDto(
     val id: String? = null,
     val label: String? = null,
@@ -170,6 +177,15 @@ data class UiBlockDto(
 
 @Serializable
 data class HomeSduiResponse(val blocks: List<UiBlockDto>)
+
+@Serializable
+data class UiBlockUpsertRequest(
+    val blockType: String,
+    val title: String? = null,
+    val payload: String = "{}",
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true
+)
 
 @Serializable
 data class ApiError(val message: String)

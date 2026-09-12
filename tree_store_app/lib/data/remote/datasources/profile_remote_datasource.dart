@@ -9,7 +9,9 @@ class ProfileRemoteDataSource {
 
   Future<UserResponseDto> getProfile() async {
     final res = await _dio.get(ApiEndpoints.profile);
-    return UserResponseDto.fromJson(res.data['data'] as Map<String, dynamic>);
+    final data = res.data;
+    if (data is! Map<String, dynamic>) throw Exception('Invalid profile response');
+    return UserResponseDto.fromJson(data);
   }
 
   Future<UserResponseDto> updateProfile({
@@ -23,7 +25,9 @@ class ProfileRemoteDataSource {
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
     };
     final res = await _dio.put(ApiEndpoints.profile, data: body);
-    return UserResponseDto.fromJson(res.data['data'] as Map<String, dynamic>);
+    final data = res.data;
+    if (data is! Map<String, dynamic>) throw Exception('Invalid profile response');
+    return UserResponseDto.fromJson(data);
   }
 
   Future<List<AddressResponseDto>> getAddresses() async {

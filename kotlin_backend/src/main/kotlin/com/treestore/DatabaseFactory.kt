@@ -4,6 +4,8 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 
 object DatabaseFactory {
     fun init(config: ApplicationConfig) {
@@ -18,5 +20,21 @@ object DatabaseFactory {
             validate()
         }
         Database.connect(HikariDataSource(hikariConfig))
+
+        transaction {
+            SchemaUtils.createMissingTablesAndColumns(
+                Profiles,
+                Categories,
+                Trees,
+                TreeImages,
+                CartItems,
+                Addresses,
+                Orders,
+                OrderItems,
+                RefreshTokens,
+                OtpCodes,
+                UiBlocks
+            )
+        }
     }
 }

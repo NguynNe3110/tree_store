@@ -41,6 +41,7 @@ import '../../presentation/blocs/home_bloc.dart';
 import '../../presentation/blocs/order_bloc.dart';
 import '../../presentation/blocs/otp_bloc.dart';
 import '../../presentation/blocs/profile_bloc.dart';
+import '../../presentation/blocs/tree_bloc.dart';
 import '../network/auth_interceptor.dart';
 import '../network/dio_client.dart';
 import '../network/token_storage.dart';
@@ -104,5 +105,6 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => OtpBloc(sendOtp: sl(), verifyOtp: sl()));
   sl.registerFactory(() => CartBloc(getCart: sl(), addToCart: sl(), removeFromCart: sl()));
   sl.registerFactory(() => OrderBloc(getOrders: sl(), createOrder: sl()));
-  sl.registerFactory(() => ProfileBloc(getProfile: sl()));
+  sl.registerFactory(() => ProfileBloc(getProfile: sl(), updateProfile: sl()));
+  sl.registerFactory(() => TreeBloc(getTreeDetail: sl()));
 }

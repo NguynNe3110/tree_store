@@ -33,7 +33,7 @@ GoRouter createRouter(TokenStorage tokenStorage) {
       final token = await tokenStorage.getAccessToken();
       final loggedIn = token != null && token.isNotEmpty;
       isAuthenticated = loggedIn;
-      final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register' || state.matchedLocation == '/forgot-password' || state.matchedLocation == '/otp';
       if (!loggedIn && !isAuthRoute) return '/login';
       if (loggedIn && isAuthRoute) return '/home';
       return null;

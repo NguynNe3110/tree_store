@@ -43,12 +43,6 @@ class AuthLogout extends AuthEvent {
   List<Object?> get props => [];
 }
 
-class AuthMockLogin extends AuthEvent {
-  const AuthMockLogin();
-  @override
-  List<Object?> get props => [];
-}
-
 // States
 abstract class AuthState extends Equatable {
   const AuthState();
@@ -110,15 +104,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogin>(_onLogin);
     on<AuthRegister>(_onRegister);
     on<AuthLogout>(_onLogout);
-    on<AuthMockLogin>(_onMockLogin);
-  }
-
-  Future<void> _onMockLogin(AuthMockLogin event, Emitter<AuthState> emit) async {
-    // ponytail: hardcoded mock user, replace with real auth when backend ready
-    debugPrint('[DEBUG] AuthMockLogin event received');
-    await _tokenStorage.saveTokens('mock-token', '');
-    emit(const AuthAuthenticated(User(id: 'mock-1', fullName: 'Mock User', email: 'mock@verdant.vn')));
-    debugPrint('[DEBUG] AuthAuthenticated emitted');
   }
 
   Future<void> _onCheckToken(AuthCheckToken event, Emitter<AuthState> emit) async {
@@ -135,15 +120,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogin(AuthLogin event, Emitter<AuthState> emit) async {
+    debugPrint('[DEBUG] _onLogin called with email: ${event.email}');
     emit(const AuthLoading());
     final result = await _login(LoginParams(email: event.email, password: event.password));
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (failure) {
+        debugPrint('[DEBUG] _onLogin failed: ${failure.message}');
+        emit(AuthError(failure.message));
+      },
+      (user) {
+        debugPrint('[DEBUG] _onLogin success, userId: ${user.id}');
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
   Future<void> _onRegister(AuthRegister event, Emitter<AuthState> emit) async {
+    debugPrint('[DEBUG] _onRegister called with email: ${event.email}, fullName: ${event.fullName}');
     emit(const AuthLoading());
     final result = await _register(RegisterParams(
       email: event.email,
@@ -152,8 +145,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       phoneNumber: event.phoneNumber,
     ));
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (failure) {
+        debugPrint('[DEBUG] _onRegister failed: ${failure.message}');
+        emit(AuthError(failure.message));
+      },
+      (user) {
+        debugPrint('[DEBUG] _onRegister success, userId: ${user.id}');
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 

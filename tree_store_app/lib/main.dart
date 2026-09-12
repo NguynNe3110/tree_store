@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/di/injection.dart' as di;
 import 'core/network/token_storage.dart';
@@ -10,9 +11,11 @@ import 'presentation/blocs/cart_bloc.dart';
 import 'presentation/blocs/home_bloc.dart';
 import 'presentation/blocs/order_bloc.dart';
 import 'presentation/blocs/profile_bloc.dart';
+import 'presentation/blocs/tree_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   await Hive.initFlutter();
   await di.initDependencies();
   runApp(const VerdantApp());
@@ -39,6 +42,9 @@ class VerdantApp extends StatelessWidget {
         ),
         BlocProvider<ProfileBloc>(
           create: (_) => di.sl<ProfileBloc>(),
+        ),
+        BlocProvider<TreeBloc>(
+          create: (_) => di.sl<TreeBloc>(),
         ),
       ],
       child: MaterialApp.router(

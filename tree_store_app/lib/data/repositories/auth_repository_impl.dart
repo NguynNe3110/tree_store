@@ -1,4 +1,5 @@
-﻿import 'package:dartz/dartz.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import '../../core/error/failures.dart';
 import '../../core/network/token_storage.dart';
@@ -16,13 +17,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    debugPrint('[DEBUG] AuthRepositoryImpl.login called, email: $email');
     try {
       final dto = await _remote.login(email, password);
+      debugPrint('[DEBUG] AuthRepositoryImpl.login success, userId: ${dto.userId}');
       await _tokenStorage.saveTokens(dto.token, dto.refreshToken);
       return Right(User(id: dto.userId, fullName: '')); // ponytail: login response has no fullName/email, fetch profile after login to populate. upgrade when UI needs it
     } on DioException catch (e) {
+      debugPrint('[DEBUG] AuthRepositoryImpl.login DioException: ${e.response?.statusCode} ${e.message}');
       return Left(_mapDioError(e));
     } catch (e) {
+      debugPrint('[DEBUG] AuthRepositoryImpl.login error: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -34,6 +39,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
     String? phoneNumber,
   }) async {
+    debugPrint('[DEBUG] AuthRepositoryImpl.register called, email: $email');
     try {
       final dto = await _remote.register(
         email: email,
@@ -41,11 +47,14 @@ class AuthRepositoryImpl implements AuthRepository {
         fullName: fullName,
         phoneNumber: phoneNumber,
       );
+      debugPrint('[DEBUG] AuthRepositoryImpl.register success, userId: ${dto.userId}, token empty: ${dto.token.isEmpty}');
       await _tokenStorage.saveTokens(dto.token, dto.refreshToken);
       return Right(User(id: dto.userId, fullName: fullName));
     } on DioException catch (e) {
+      debugPrint('[DEBUG] AuthRepositoryImpl.register DioException: ${e.response?.statusCode} ${e.message}');
       return Left(_mapDioError(e));
     } catch (e) {
+      debugPrint('[DEBUG] AuthRepositoryImpl.register error: $e');
       return Left(ServerFailure(e.toString()));
     }
   }

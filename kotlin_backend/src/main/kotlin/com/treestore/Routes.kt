@@ -10,9 +10,11 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.github.smiley4.ktoropenapi.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.serialization.json.jsonObject
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -21,7 +23,14 @@ fun generateRefreshToken(): String = UUID.randomUUID().toString()
 
 fun Route.authRoutes(secret: String, issuer: String, audience: String) {
     route("/api/auth") {
-        post("/register") {
+        post("/register", {
+            summary = "Register new user"
+            request { body<RegisterRequest>() }
+            response {
+                code(HttpStatusCode.Created) { description = "User created, returns tokens" }
+                code(HttpStatusCode.Conflict) { description = "Email already exists" }
+            }
+        }) {
             val req = call.receive<RegisterRequest>()
             val id = UUID.randomUUID()
             val now = OffsetDateTime.now()
@@ -56,7 +65,14 @@ fun Route.authRoutes(secret: String, issuer: String, audience: String) {
             }
             call.respond(HttpStatusCode.Created, AuthResponse(token, refreshToken, id.toString(), "customer"))
         }
-        post("/login") {
+        post("/login", {
+            summary = "Login with email and password"
+            request { body<LoginRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "Login success, returns tokens" }
+                code(HttpStatusCode.Unauthorized) { description = "Invalid credentials" }
+            }
+        }) {
             val req = call.receive<LoginRequest>()
             val profile = transaction {
                 Profiles.selectAll().where { Profiles.email eq req.email }.singleOrNull()
@@ -87,7 +103,14 @@ fun Route.authRoutes(secret: String, issuer: String, audience: String) {
             }
             call.respond(AuthResponse(token, refreshToken, userId, role))
         }
-        post("/refresh") {
+        post("/refresh", {
+            summary = "Refresh access token using refresh token"
+            request { body<RefreshRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "New tokens issued" }
+                code(HttpStatusCode.Unauthorized) { description = "Invalid or expired refresh token" }
+            }
+        }) {
             val req = call.receive<RefreshRequest>()
             val now = OffsetDateTime.now()
             val result = transaction {
@@ -126,7 +149,12 @@ fun Route.authRoutes(secret: String, issuer: String, audience: String) {
             else call.respond(result)
         }
         authenticate("auth-jwt") {
-            post("/logout") {
+            post("/logout", {
+                summary = "Logout current user"
+                response {
+                    code(HttpStatusCode.OK) { description = "Logged out successfully" }
+                }
+            }) {
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Logged out"))
             }
         }
@@ -134,7 +162,12 @@ fun Route.authRoutes(secret: String, issuer: String, audience: String) {
 }
 
 fun Route.categoryRoutes() {
-    get("/api/categories") {
+    get("/api/categories", {
+        summary = "List all categories"
+        response {
+            code(HttpStatusCode.OK) { description = "Category list" }
+        }
+    }) {
         val categories = transaction {
             Categories.selectAll().orderBy(Categories.sortOrder to SortOrder.ASC).map { row ->
                 CategoryDto(
@@ -151,7 +184,19 @@ fun Route.categoryRoutes() {
 
 fun Route.treeRoutes() {
     route("/api/trees") {
-        get {
+        get({
+            summary = "List trees with optional filters"
+            request {
+                queryParameter<String>("categoryId")
+                queryParameter<String>("keyword")
+                queryParameter<String>("status")
+                queryParameter<Int>("page")
+                queryParameter<Int>("limit")
+            }
+            response {
+                code(HttpStatusCode.OK) { description = "Paginated tree list" }
+            }
+        }) {
             val categoryId = call.request.queryParameters["categoryId"]
             val keyword = call.request.queryParameters["keyword"]
             val status = call.request.queryParameters["status"]
@@ -182,7 +227,16 @@ fun Route.treeRoutes() {
             }
             call.respond(TreeListResponse(trees.first, page, limit, trees.second))
         }
-        get("/{id}") {
+        get("/{id}", {
+            summary = "Get tree detail by ID"
+            request {
+                pathParameter<String>("id")
+            }
+            response {
+                code(HttpStatusCode.OK) { description = "Tree detail with images" }
+                code(HttpStatusCode.NotFound) { description = "Tree not found" }
+            }
+        }) {
             val treeId = UUID.fromString(call.parameters["id"]!!)
             val result = transaction {
                 val treeRow = Trees.selectAll().where { Trees.id eq treeId }.singleOrNull() ?: return@transaction null
@@ -211,7 +265,12 @@ fun Route.treeRoutes() {
 fun Route.cartRoutes() {
     authenticate("auth-jwt") {
         route("/api/cart") {
-            get {
+            get({
+                summary = "Get current user cart items"
+                response {
+                    code(HttpStatusCode.OK) { description = "Cart item list" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val items = transaction {
                     CartItems.selectAll().where { CartItems.userId eq userId }.map { row ->
@@ -220,7 +279,13 @@ fun Route.cartRoutes() {
                 }
                 call.respond(items)
             }
-            post {
+            post({
+                summary = "Add item to cart or update quantity"
+                request { body<CartItemDto>() }
+                response {
+                    code(HttpStatusCode.Created) { description = "Added to cart" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val req = call.receive<CartItemDto>()
                 val now = OffsetDateTime.now()
@@ -246,7 +311,15 @@ fun Route.cartRoutes() {
                 }
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Added to cart"))
             }
-            delete("/{id}") {
+            delete("/{id}", {
+                summary = "Remove item from cart"
+                request {
+                    pathParameter<String>("id")
+                }
+                response {
+                    code(HttpStatusCode.OK) { description = "Item removed" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val itemId = UUID.fromString(call.parameters["id"]!!)
                 transaction {
@@ -261,7 +334,12 @@ fun Route.cartRoutes() {
 fun Route.orderRoutes() {
     authenticate("auth-jwt") {
         route("/api/orders") {
-            get {
+            get({
+                summary = "List current user orders"
+                response {
+                    code(HttpStatusCode.OK) { description = "Order list" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val orders = transaction {
                     Orders.selectAll().where { Orders.userId eq userId }.orderBy(Orders.createdAt to SortOrder.DESC).map { row ->
@@ -278,7 +356,16 @@ fun Route.orderRoutes() {
                 }
                 call.respond(orders)
             }
-            get("/{id}") {
+            get("/{id}", {
+                summary = "Get order detail by ID"
+                request {
+                    pathParameter<String>("id")
+                }
+                response {
+                    code(HttpStatusCode.OK) { description = "Order detail with items" }
+                    code(HttpStatusCode.NotFound) { description = "Order not found" }
+                }
+            }) {
                 val orderId = UUID.fromString(call.parameters["id"]!!)
                 val result = transaction {
                     val orderRow = Orders.selectAll().where { Orders.id eq orderId }.singleOrNull() ?: return@transaction null
@@ -299,7 +386,13 @@ fun Route.orderRoutes() {
                 if (result == null) call.respond(HttpStatusCode.NotFound, ApiError("Order not found"))
                 else call.respond(result)
             }
-            post {
+            post({
+                summary = "Create new order"
+                request { body<CreateOrderRequest>() }
+                response {
+                    code(HttpStatusCode.Created) { description = "Order created" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val req = call.receive<CreateOrderRequest>()
                 val orderId = UUID.randomUUID()
@@ -361,7 +454,13 @@ fun Route.orderRoutes() {
 fun Route.profileRoutes() {
     authenticate("auth-jwt") {
         route("/api/profile") {
-            get {
+            get({
+                summary = "Get current user profile"
+                response {
+                    code(HttpStatusCode.OK) { description = "User profile" }
+                    code(HttpStatusCode.NotFound) { description = "Profile not found" }
+                }
+            }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val profile = transaction {
                     val row = Profiles.selectAll().where { Profiles.id eq userId }.singleOrNull() ?: return@transaction null
@@ -370,8 +469,39 @@ fun Route.profileRoutes() {
                 if (profile == null) call.respond(HttpStatusCode.NotFound, ApiError("Profile not found"))
                 else call.respond(profile)
             }
+            put({
+                summary = "Update current user profile"
+                request { body<UpdateProfileRequest>() }
+                response {
+                    code(HttpStatusCode.OK) { description = "Updated profile" }
+                    code(HttpStatusCode.NotFound) { description = "Profile not found" }
+                }
+            }) {
+                val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
+                val req = call.receive<UpdateProfileRequest>()
+                val now = OffsetDateTime.now()
+                val profile = transaction {
+                    val exists = Profiles.selectAll().where { Profiles.id eq userId }.singleOrNull() != null
+                    if (!exists) return@transaction null
+                    Profiles.update({ Profiles.id eq userId }) {
+                        if (req.fullName != null) it[fullName] = req.fullName
+                        if (req.phoneNumber != null) it[phoneNumber] = req.phoneNumber
+                        if (req.avatarUrl != null) it[avatarUrl] = req.avatarUrl
+                        it[updatedAt] = now
+                    }
+                    val row = Profiles.selectAll().where { Profiles.id eq userId }.single()
+                    ProfileDto(row[Profiles.id].toString(), row[Profiles.fullName], row[Profiles.email], row[Profiles.phoneNumber], row[Profiles.avatarUrl], row[Profiles.role])
+                }
+                if (profile == null) call.respond(HttpStatusCode.NotFound, ApiError("Profile not found"))
+                else call.respond(profile)
+            }
             route("/addresses") {
-                get {
+                get({
+                    summary = "List current user addresses"
+                    response {
+                        code(HttpStatusCode.OK) { description = "Address list" }
+                    }
+                }) {
                     val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                     val addresses = transaction {
                         Addresses.selectAll().where { Addresses.userId eq userId }.map { row ->
@@ -380,7 +510,13 @@ fun Route.profileRoutes() {
                     }
                     call.respond(addresses)
                 }
-                post {
+                post({
+                    summary = "Add new address"
+                    request { body<AddressDto>() }
+                    response {
+                        code(HttpStatusCode.Created) { description = "Address created" }
+                    }
+                }) {
                     val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                     val req = call.receive<AddressDto>()
                     val now = OffsetDateTime.now()
@@ -413,7 +549,12 @@ fun Route.profileRoutes() {
 }
 
 fun Route.homeRoutes() {
-    get("/api/home") {
+    get("/api/home", {
+        summary = "Get home screen SDUI blocks"
+        response {
+            code(HttpStatusCode.OK) { description = "Home screen UI blocks" }
+        }
+    }) {
         val blocks = transaction {
             UiBlocks.selectAll().where { (UiBlocks.screenKey eq "home") and (UiBlocks.isActive eq true) }
                 .orderBy(UiBlocks.sortOrder to SortOrder.ASC).map { row ->
@@ -427,9 +568,9 @@ fun Route.homeRoutes() {
                 }
         }
         // ponytail: fallback hardcoded SDUI when DB empty. remove after seeding ui_blocks table
-        if (blocks.isEmpty()) {
+        val baseBlocks = if (blocks.isEmpty()) {
             val fallbackJson = kotlinx.serialization.json.Json
-            val fallback = listOf(
+            listOf(
                 UiBlockDto("seed-1", "banner_carousel", null, fallbackJson.parseToJsonElement("""{"banners":[{"tag":"SALE 20%","title":"Mang thien nhien vao nha ban","subtitle":"Giam 20% cho don hang dau tien","cta":"Mua ngay"}]}""").jsonObject, 0),
                 UiBlockDto("seed-2", "quick_actions", null, fallbackJson.parseToJsonElement("""{"items":[{"icon":"🏠","label":"Trong nha"},{"icon":"🌳","label":"Ngoai troi"},{"icon":"🌵","label":"Sen da"},{"icon":"🪴","label":"Chau"}]}""").jsonObject, 1),
                 UiBlockDto("seed-3", "flash_sale_strip", null, fallbackJson.parseToJsonElement("""{"title":"Flash Sale hom nay","subtitle":"Ket thuc trong","hours":2,"minutes":18,"seconds":45}""").jsonObject, 2),
@@ -439,16 +580,136 @@ fun Route.homeRoutes() {
                 UiBlockDto("seed-7", "care_tip_card", null, fallbackJson.parseToJsonElement("""{"icon":"💧","title":"Meo tuoi cay mua kho","subtitle":"5 dau hieu cay dang khat nuoc"}""").jsonObject, 6),
                 UiBlockDto("seed-8", "product_grid", "Tat ca san pham", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, 7)
             )
-            call.respond(HomeSduiResponse(fallback))
-        } else {
-            call.respond(HomeSduiResponse(blocks))
+        } else blocks
+
+        val allTrees = transaction {
+            Trees.selectAll().where { Trees.isActive eq true }
+                .orderBy(Trees.createdAt to SortOrder.DESC).limit(20).map { row ->
+                    val price = row[Trees.price].toDouble()
+                    val formattedPrice = "%,.0f\u20AB".format(price).replace(",", ".")
+                    kotlinx.serialization.json.buildJsonObject {
+                        put("id", kotlinx.serialization.json.JsonPrimitive(row[Trees.id].toString()))
+                        put("name", kotlinx.serialization.json.JsonPrimitive(row[Trees.name]))
+                        put("price", kotlinx.serialization.json.JsonPrimitive(formattedPrice))
+                        put("sub", kotlinx.serialization.json.JsonPrimitive(row[Trees.description] ?: ""))
+                        put("imageUrl", kotlinx.serialization.json.JsonPrimitive(row[Trees.coverImageUrl] ?: ""))
+                    }
+                }
+        }
+        val productsArray = kotlinx.serialization.json.JsonArray(allTrees)
+        val enrichedBlocks = baseBlocks.map { block ->
+            if (block.blockType == "product_horizontal_list" || block.blockType == "product_grid") {
+                val newPayload = kotlinx.serialization.json.buildJsonObject {
+                    block.payload.forEach { (k, v) -> put(k, v) }
+                    put("products", productsArray)
+                }
+                block.copy(payload = newPayload)
+            } else block
+        }
+        call.respond(HomeSduiResponse(enrichedBlocks))
+    }
+}
+
+// ponytail: admin SDUI routes, no auth for MVP. add basic auth when production
+fun Route.adminSduiRoutes() {
+    route("/api/admin/sdui") {
+        get({
+            summary = "List all SDUI blocks"
+            response { code(HttpStatusCode.OK) { description = "Block list" } }
+        }) {
+            val screenKey = call.request.queryParameters["screenKey"] ?: "home"
+            val blocks = transaction {
+                UiBlocks.selectAll().where { UiBlocks.screenKey eq screenKey }
+                    .orderBy(UiBlocks.sortOrder to SortOrder.ASC).map { row ->
+                        mapOf(
+                            "id" to row[UiBlocks.id].toString(),
+                            "blockType" to row[UiBlocks.blockType],
+                            "title" to row[UiBlocks.title],
+                            "payload" to row[UiBlocks.payload],
+                            "sortOrder" to row[UiBlocks.sortOrder],
+                            "isActive" to row[UiBlocks.isActive]
+                        )
+                    }
+            }
+            call.respond(blocks)
+        }
+        post({
+            summary = "Create new SDUI block"
+            request { body<UiBlockUpsertRequest>() }
+            response { code(HttpStatusCode.Created) { description = "Block created" } }
+        }) {
+            val req = call.receive<UiBlockUpsertRequest>()
+            val id = UUID.randomUUID()
+            val now = OffsetDateTime.now()
+            transaction {
+                UiBlocks.insert {
+                    it[UiBlocks.id] = id
+                    it[screenKey] = "home"
+                    it[blockType] = req.blockType
+                    it[title] = req.title
+                    it[payload] = req.payload
+                    it[sortOrder] = req.sortOrder
+                    it[isActive] = req.isActive
+                    it[createdAt] = now
+                    it[updatedAt] = now
+                }
+            }
+            call.respond(HttpStatusCode.Created, mapOf("id" to id.toString()))
+        }
+        put("/{id}", {
+            summary = "Update SDUI block"
+            request { body<UiBlockUpsertRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "Block updated" }
+                code(HttpStatusCode.NotFound) { description = "Block not found" }
+            }
+        }) {
+            val blockId = UUID.fromString(call.parameters["id"]!!)
+            val req = call.receive<UiBlockUpsertRequest>()
+            val now = OffsetDateTime.now()
+            val updated = transaction {
+                val exists = UiBlocks.selectAll().where { UiBlocks.id eq blockId }.singleOrNull() != null
+                if (!exists) return@transaction false
+                UiBlocks.update({ UiBlocks.id eq blockId }) {
+                    it[blockType] = req.blockType
+                    it[title] = req.title
+                    it[payload] = req.payload
+                    it[sortOrder] = req.sortOrder
+                    it[isActive] = req.isActive
+                    it[updatedAt] = now
+                }
+                true
+            }
+            if (updated) call.respond(HttpStatusCode.OK, mapOf("message" to "Updated"))
+            else call.respond(HttpStatusCode.NotFound, ApiError("Block not found"))
+        }
+        delete("/{id}", {
+            summary = "Delete SDUI block"
+            response {
+                code(HttpStatusCode.OK) { description = "Block deleted" }
+                code(HttpStatusCode.NotFound) { description = "Block not found" }
+            }
+        }) {
+            val blockId = UUID.fromString(call.parameters["id"]!!)
+            val deleted = transaction {
+                val count = UiBlocks.deleteWhere { UiBlocks.id eq blockId }
+                count > 0
+            }
+            if (deleted) call.respond(HttpStatusCode.OK, mapOf("message" to "Deleted"))
+            else call.respond(HttpStatusCode.NotFound, ApiError("Block not found"))
         }
     }
 }
 
 fun Route.otpRoutes() {
     route("/api/auth") {
-        post("/send-otp") {
+        post("/send-otp", {
+            summary = "Send OTP to email"
+            request { body<SendOtpRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "OTP sent" }
+            }
+        }) {
             val req = call.receive<SendOtpRequest>()
             val code = (100000..999999).random().toString()
             val now = OffsetDateTime.now()
@@ -467,7 +728,14 @@ fun Route.otpRoutes() {
             EmailService.sendOtp(req.email, code)
             call.respond(OtpResponse("OTP sent", 300))
         }
-        post("/verify-otp") {
+        post("/verify-otp", {
+            summary = "Verify OTP code"
+            request { body<VerifyOtpRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "OTP verified" }
+                code(HttpStatusCode.BadRequest) { description = "Invalid or expired OTP" }
+            }
+        }) {
             val req = call.receive<VerifyOtpRequest>()
             val now = OffsetDateTime.now()
             val valid = transaction {
@@ -483,7 +751,14 @@ fun Route.otpRoutes() {
             if (valid) call.respond(mapOf("verified" to true, "message" to "OTP verified"))
             else call.respond(HttpStatusCode.BadRequest, ApiError("Invalid or expired OTP"))
         }
-        post("/forgot-password") {
+        post("/forgot-password", {
+            summary = "Request password reset OTP"
+            request { body<ForgotPasswordRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "OTP sent for password reset" }
+                code(HttpStatusCode.NotFound) { description = "Email not found" }
+            }
+        }) {
             val req = call.receive<ForgotPasswordRequest>()
             val exists = transaction {
                 Profiles.selectAll().where { Profiles.email eq req.email }.singleOrNull() != null
@@ -508,7 +783,14 @@ fun Route.otpRoutes() {
             EmailService.sendOtp(req.email, code)
             call.respond(OtpResponse("OTP sent for password reset", 300))
         }
-        post("/reset-password") {
+        post("/reset-password", {
+            summary = "Reset password with OTP"
+            request { body<ResetPasswordRequest>() }
+            response {
+                code(HttpStatusCode.OK) { description = "Password reset successful" }
+                code(HttpStatusCode.BadRequest) { description = "Invalid or expired OTP" }
+            }
+        }) {
             val req = call.receive<ResetPasswordRequest>()
             val now = OffsetDateTime.now()
             val valid = transaction {

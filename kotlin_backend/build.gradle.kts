@@ -42,6 +42,10 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:1.5.12")
 
+    // ponytail: ktor-openapi for swagger UI dev only, remove or scope when production
+    implementation("io.github.smiley4:ktor-openapi:5.1.0")
+    implementation("io.github.smiley4:ktor-swagger-ui:5.1.0")
+
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
 }

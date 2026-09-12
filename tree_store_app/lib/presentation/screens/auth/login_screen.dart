@@ -19,18 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextButton(
-            onPressed: () {
-              debugPrint('[DEBUG] Mock Login button pressed');
-              context.read<AuthBloc>().add(const AuthMockLogin());
-            },
-            child: const Text('Mock Login', style: TextStyle(color: AppColors.muted)),
-          ),
-        ),
-      ),
+
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
@@ -75,13 +64,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           suffixIcon: IconButton(icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, color: AppColors.muted), onPressed: () => setState(() => _obscure = !_obscure)),
                         ),
                       ),
-                      Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () {}, child: const Text('Quên mật khẩu?', style: TextStyle(color: AppColors.green700, fontSize: 13)))),
+                      Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () { debugPrint('[DEBUG] Forgot password tapped'); context.push('/forgot-password'); }, child: const Text('Quên mật khẩu?', style: TextStyle(color: AppColors.green700, fontSize: 13)))),
                       const SizedBox(height: 8),
                       loading
                           ? const Center(child: CircularProgressIndicator())
                           : PrimaryButton(
                               label: 'Đăng nhập',
                               onPressed: () {
+                                debugPrint('[DEBUG] Login button pressed, email: ${_email.text.trim()}');
                                 context.read<AuthBloc>().add(AuthLogin(_email.text.trim(), _pass.text));
                               },
                             ),

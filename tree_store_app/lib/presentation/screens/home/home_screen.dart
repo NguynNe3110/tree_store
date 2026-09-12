@@ -2,8 +2,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/image_url.dart';
 import '../../../data/remote/models/responses/home_response.dart';
 import '../../blocs/home_bloc.dart';
+import '../../blocs/profile_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,14 +30,22 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    const CircleAvatar(radius: 20, backgroundColor: AppColors.green50, child: Text('MA', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.green700))),
-                    const SizedBox(width: 12),
-                    const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Xin chào 🌱', style: TextStyle(fontSize: 12, color: AppColors.muted)), Text('Minh Anh', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink))]),
-                    const Spacer(),
-                    Stack(children: [IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined, color: AppColors.ink)), Positioned(right: 8, top: 8, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.terra, shape: BoxShape.circle)))]),
-                  ],
+                child: BlocBuilder<ProfileBloc, ProfileState>(
+                  builder: (context, state) {
+                    final user = state is ProfileLoaded ? state.user : (state is ProfileUpdated ? state.user : null);
+                    final name = user?.fullName ?? '...';
+                    final parts = name.trim().split(' ');
+                    final initials = parts.isNotEmpty && parts.first.isNotEmpty ? (parts.length > 1 ? '${parts.first[0]}${parts.last[0]}'.toUpperCase() : parts.first[0].toUpperCase()) : '?';
+                    return Row(
+                      children: [
+                        CircleAvatar(radius: 20, backgroundColor: AppColors.green50, child: Text(initials, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.green700))),
+                        const SizedBox(width: 12),
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Xin chào 🌱', style: TextStyle(fontSize: 12, color: AppColors.muted)), Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink))]),
+                        const Spacer(),
+                        Stack(children: [IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined, color: AppColors.ink)), Positioned(right: 8, top: 8, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.terra, shape: BoxShape.circle)))]),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -263,25 +273,38 @@ class _ProductHorizontalList extends StatelessWidget {
               itemCount: products.length,
               itemBuilder: (_, i) {
                 final p = products[i] as Map<String, dynamic>;
-                return Container(
-                  width: 140,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line2)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(height: 100, decoration: BoxDecoration(color: AppColors.green50, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32))),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p['name'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            Text(p['price'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.green700)),
-                          ],
+                final imgUrl = resolveImageUrl(p['imageUrl'] as String?);
+                return GestureDetector(
+                  onTap: () => context.push('/product/${p['id']}'),
+                  child: Container(
+                    width: 140,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.line2)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                          child: SizedBox(
+                            height: 100,
+                            width: double.infinity,
+                            child: imgUrl.isEmpty
+                                ? Container(color: AppColors.green50, child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32)))
+                                : Image.network(imgUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppColors.green50, child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32)))),
+                          ),
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p['name'] ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(p['price'] ?? '', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.green700)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -441,6 +464,7 @@ class _ProductGrid extends StatelessWidget {
             itemCount: products.length,
             itemBuilder: (_, i) {
               final p = products[i] as Map<String, dynamic>;
+              final imgUrl = resolveImageUrl(p['imageUrl'] as String?);
               return GestureDetector(
                 onTap: () => context.push('/product/${p['id']}'),
                 child: Container(
@@ -448,7 +472,16 @@ class _ProductGrid extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(height: 120, decoration: BoxDecoration(color: AppColors.green50, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32))),
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        child: SizedBox(
+                          height: 120,
+                          width: double.infinity,
+                          child: imgUrl.isEmpty
+                              ? Container(color: AppColors.green50, child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32)))
+                              : Image.network(imgUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppColors.green50, child: const Center(child: Icon(Icons.local_florist, color: AppColors.green700, size: 32)))),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.all(10),
                         child: Column(
