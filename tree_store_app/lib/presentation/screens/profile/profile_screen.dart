@@ -34,7 +34,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (confirmed == true && mounted) {
       context.read<AuthBloc>().add(const AuthLogout());
-      context.go('/login');
     }
   }
 
@@ -42,7 +41,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FBF8), // canvas bg
-      body: BlocBuilder<ProfileBloc, ProfileState>(
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthUnauthenticated) {
+            context.go('/login');
+          }
+        },
+        child: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, state) {
           if (state is ProfileLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -153,10 +158,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
+      )
     );
   }
 
-  Widget _stat(String v, String l) => Column(children: [Text(v, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)), Text(l, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.8), letterSpacing: 0.6))]);
+  Widget _stat(String v, String l) => Column(children: [Text(v, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)), Text(l, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white70, letterSpacing: 0.6))]);
 
   Widget _menuItem(IconData icon, String t, String? s, VoidCallback? onTap, {bool isLogout = false}) => InkWell(
         onTap: onTap,

@@ -23,6 +23,16 @@ extension TreeResponseMapper on TreeResponseDto {
         stockQuantity: stockQuantity,
         isFeatured: isFeatured,
         isActive: isActive,
-        images: images.map((e) => e.toEntity(id)).toList(),
+        images: images.isNotEmpty
+            ? images.map((e) => e.toEntity(id)).toList()
+            : [
+                if (coverImageUrl != null && coverImageUrl!.isNotEmpty)
+                  ProductImage(
+                    id: 'cover-$id',
+                    productId: id,
+                    imageUrl: coverImageUrl!,
+                    sortOrder: 0,
+                  )
+              ],
       );
 }

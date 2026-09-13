@@ -8,9 +8,10 @@ abstract class HomeEvent extends Equatable {
 }
 
 class HomeLoad extends HomeEvent {
-  const HomeLoad();
+  final String? categoryId;
+  const HomeLoad({this.categoryId});
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [categoryId];
 }
 
 abstract class HomeState extends Equatable {
@@ -54,7 +55,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   Future<void> _onLoad(HomeLoad event, Emitter<HomeState> emit) async {
     emit(const HomeLoading());
-    final result = await _getHomeBlocks();
+    final result = await _getHomeBlocks(categoryId: event.categoryId);
     result.fold(
       (f) => emit(HomeError(f.message)),
       (response) => emit(HomeLoaded(response.blocks)),

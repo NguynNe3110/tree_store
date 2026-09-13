@@ -10,6 +10,7 @@ import 'presentation/blocs/auth_bloc.dart';
 import 'presentation/blocs/cart_bloc.dart';
 import 'presentation/blocs/home_bloc.dart';
 import 'presentation/blocs/order_bloc.dart';
+import 'presentation/blocs/otp_bloc.dart';
 import 'presentation/blocs/profile_bloc.dart';
 import 'presentation/blocs/search_bloc.dart';
 import 'presentation/blocs/tree_bloc.dart';
@@ -40,6 +41,9 @@ class VerdantApp extends StatelessWidget {
         ),
         BlocProvider<OrderBloc>(
           create: (_) => di.sl<OrderBloc>(),
+        ),
+        BlocProvider<OtpBloc>(
+          create: (_) => di.sl<OtpBloc>(),
         ),
         BlocProvider<ProfileBloc>(
           create: (_) => di.sl<ProfileBloc>(),

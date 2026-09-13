@@ -7,7 +7,7 @@ class GetHomeBlocksUsecase {
   final HomeRepository _repository;
   GetHomeBlocksUsecase(this._repository);
 
-  Future<Either<Failure, HomeSduiResponse>> call() async {
-    return await _repository.getHomeBlocks();
+  Future<Either<Failure, HomeSduiResponse>> call({String? categoryId}) async {
+    return await _repository.getHomeBlocks(categoryId: categoryId);
   }
 }

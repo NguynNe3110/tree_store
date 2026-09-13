@@ -40,10 +40,26 @@ object SeedData {
                 Triple("Sen Đá Echeveria", "Rosette đẹp, nhiều màu. Tưới ít, đặt nơi sáng.", 2),
                 Triple("Sen Đá Chuỗi Ngọc", "Thân rủ mềm mại, phù hợp chậu treo.", 2),
                 Triple("Bonsai Tùng La Hán", "Dáng cổ thụ, lá kim xanh quanh năm. Biểu tượng trường thọ.", 3),
-                Triple("Bonsai Linh Sam", "Hoa tím nhỏ xinh, thân uốn dẻo. Dễ tạo dáng cho người mới.", 3)
+                Triple("Bonsai Linh Sam", "Hoa tím nhỏ xinh, thân uốn dẻo. Dễ tạo dáng cho người mới.", 3),
+                Triple("Cây Kim Tiền", "Lá xanh bóng, tượng trưng cho tài lộc. Thích hợp để bàn.", 0),
+                Triple("Cây Lan Ý", "Hoa trắng thanh thoát, lọc bụi mịn và sóng điện từ tốt.", 0),
+                Triple("Trầu Bà Thanh Xuân", "Lá to xẻ sâu, tạo không gian xanh mát ấn tượng.", 0),
+                Triple("Cây Đuôi Công", "Họa tiết lá độc đáo như lông công. Sống tốt trong bóng râm.", 0),
+                Triple("Cây Tùng Bồng Lai", "Lá nhỏ như mây, mang lại may mắn và sức khỏe.", 1),
+                Triple("Xương Rồng Tai Thỏ", "Dáng ngộ nghĩnh, rất ít nước, chịu nắng gắt cực tốt.", 1),
+                Triple("Sen Đá Móng Rồng", "Lá cứng cáp, vằn trắng nổi bật. Siêu bền, ít cần chăm.", 2),
+                Triple("Bonsai Hoa Mai", "Vẻ đẹp ngày Tết, cánh vàng rực rỡ, dáng thế nghệ thuật.", 3),
+                Triple("Bonsai Hoa Đào", "Sắc hồng mùa xuân, gốc xù xì cổ kính, hoa nở rộ.", 3),
+                Triple("Cây Ngũ Gia Bì", "Lá kép hình chân chim, đuổi muỗi và lọc không khí.", 0),
+                Triple("Cây Thiết Mộc Lan", "Thân cột vững chãi, lá xanh sọc vàng, mang lại vượng khí.", 0),
+                Triple("Cây Vạn Niên Thanh", "Sức sống mãnh liệt, lá to xanh trắng, phong thủy tốt.", 0)
             )
 
-            val prices = listOf(350000, 180000, 450000, 220000, 85000, 120000, 1500000, 680000)
+            val prices = listOf(
+                350000, 180000, 450000, 220000, 85000, 120000, 1500000, 680000,
+                250000, 150000, 320000, 280000, 190000, 95000, 75000, 2500000,
+                2200000, 160000, 480000, 140000
+            )
 
             val treeIds = trees.map { UUID.randomUUID() }
             Trees.batchInsert(trees.mapIndexed { i, t -> Triple(t.first, t.second, t.third) to i }) { entry ->
@@ -56,8 +72,10 @@ object SeedData {
                 this[Trees.price] = java.math.BigDecimal(prices[idx])
                 this[Trees.stockQuantity] = 10
                 this[Trees.status] = "available"
-                this[Trees.coverImageUrl] = "/images/cay${idx + 1}.jpg"
-                this[Trees.isFeatured] = idx < 4
+                // Reuse the 15 images we have
+                val imgIdx = (idx % 15) + 1
+                this[Trees.coverImageUrl] = "/images/cay$imgIdx.jpg"
+                this[Trees.isFeatured] = idx < 4 || idx >= 15
                 this[Trees.isActive] = true
                 this[Trees.tags] = "[]"
                 this[Trees.extraSpecs] = "{}"
@@ -69,9 +87,10 @@ object SeedData {
             TreeImages.batchInsert(treeIds.mapIndexed { i, tid -> Pair(tid, i) }) { entry ->
                 val tid = entry.first
                 val idx = entry.second
+                val imgIdx = (idx % 15) + 1
                 this[TreeImages.id] = UUID.randomUUID()
                 this[TreeImages.treeId] = tid
-                this[TreeImages.imageUrl] = "/images/cay${idx + 1}.jpg"
+                this[TreeImages.imageUrl] = "/images/cay$imgIdx.jpg"
                 this[TreeImages.alt] = trees[idx].first
                 this[TreeImages.isCover] = true
                 this[TreeImages.sortOrder] = 0

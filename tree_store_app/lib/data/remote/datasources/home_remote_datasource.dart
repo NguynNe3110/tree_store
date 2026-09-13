@@ -6,8 +6,13 @@ class HomeRemoteDataSource {
   final Dio _dio;
   HomeRemoteDataSource(this._dio);
 
-  Future<HomeSduiResponse> getHomeBlocks() async {
-    final res = await _dio.get(ApiEndpoints.home);
+  Future<HomeSduiResponse> getHomeBlocks({String? categoryId}) async {
+    final res = await _dio.get(
+      ApiEndpoints.home,
+      queryParameters: {
+        if (categoryId != null) 'categoryId': categoryId,
+      },
+    );
     return HomeSduiResponse.fromJson(res.data as Map<String, dynamic>);
   }
 }

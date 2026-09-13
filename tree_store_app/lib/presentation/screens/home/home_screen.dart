@@ -18,6 +18,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<HomeBloc>().add(const HomeLoad());
+    
+    // Ensure profile data is loaded if not already present
+    final profileState = context.read<ProfileBloc>().state;
+    if (profileState is ProfileInitial || profileState is ProfileError) {
+      context.read<ProfileBloc>().add(const ProfileLoad());
+    }
   }
 
   @override
@@ -48,7 +54,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Xin chào 🌱', style: TextStyle(fontSize: 12, color: AppColors.muted)), Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink))]),
                         const Spacer(),
-                        Stack(children: [IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_outlined, color: AppColors.ink)), Positioned(right: 8, top: 8, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.terra, shape: BoxShape.circle)))]),
+                        Stack(
+                          children: [
+                            IconButton(onPressed: () => context.push('/notifications'), icon: const Icon(Icons.notifications_outlined, color: AppColors.ink)),
+                            Positioned(right: 8, top: 8, child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.terra, shape: BoxShape.circle))),
+                          ],
+                        ),
                       ],
                     );
                   },
@@ -241,26 +252,66 @@ class _FlashSaleStrip extends StatelessWidget {
       );
 }
 
-class _CategoryTabs extends StatelessWidget {
+class _CategoryTabs extends StatefulWidget {
   final UiBlockResponse block;
   const _CategoryTabs(this.block);
 
   @override
+  State<_CategoryTabs> createState() => _CategoryTabsState();
+}
+
+class _CategoryTabsState extends State<_CategoryTabs> {
+  String _selectedId = "all";
+
+  @override
   Widget build(BuildContext context) {
-    final cats = (block.payload['categories'] as List<dynamic>?) ?? [];
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: cats.length,
-        itemBuilder: (_, i) => Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: Chip(
-            label: Text(cats[i] as String, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: i == 0 ? Colors.white : AppColors.ink2)),
-            backgroundColor: i == 0 ? AppColors.green700 : Colors.white,
-            side: BorderSide(color: i == 0 ? AppColors.green700 : AppColors.line2),
-          ),
+    final categories = (widget.block.payload['categories'] as List<dynamic>?) ?? [];
+    if (categories.isEmpty) return const SizedBox.shrink();
+    
+    // Add "All" option at the beginning
+    final allTabs = [
+      {'id': 'all', 'name': 'Tất cả'},
+      ...categories
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SizedBox(
+        height: 36,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: allTabs.length,
+          itemBuilder: (_, i) {
+            final cat = allTabs[i] as Map<String, dynamic>;
+            final id = cat['id'] as String;
+            final isSelected = _selectedId == id;
+            return GestureDetector(
+              onTap: () {
+                if (_selectedId != id) {
+                  setState(() => _selectedId = id);
+                  context.read<HomeBloc>().add(HomeLoad(categoryId: id == 'all' ? null : id));
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.green700 : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isSelected ? AppColors.green700 : AppColors.line2),
+                ),
+                child: Text(
+                  cat['name'] ?? '',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : AppColors.ink2,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

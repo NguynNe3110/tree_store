@@ -58,6 +58,8 @@ class _OtpScreenState extends State<OtpScreen> {
           if (state is OtpVerified) {
             if (widget.purpose == 'register') {
               context.go('/home');
+            } else if (widget.purpose == 'reset') {
+              context.push('/reset-password?email=${widget.email}');
             } else {
               context.pop(true);
             }

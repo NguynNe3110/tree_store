@@ -8,8 +8,23 @@ class ProductCard extends StatelessWidget {
   final VoidCallback? onTap;
   const ProductCard({super.key, required this.product, this.onTap});
 
+  String _formatPrice(double v) {
+    final s = v.toStringAsFixed(0);
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()}₫';
+  }
+
   @override
   Widget build(BuildContext context) {
+    String imgUrl = '';
+    if (product.images.isNotEmpty) {
+      imgUrl = resolveImageUrl(product.images.first.imageUrl);
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -27,12 +42,11 @@ class ProductCard extends StatelessWidget {
                 height: 140,
                 width: double.infinity,
                 color: AppColors.green50,
-                child: product.images.isNotEmpty &&
-                        product.images.first.imageUrl.isNotEmpty
-                    ? Image.network(resolveImageUrl(product.images.first.imageUrl),
-                        fit: BoxFit.cover, errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.eco,
-                                size: 40, color: AppColors.green700))
+                child: imgUrl.isNotEmpty
+                    ? Image.network(imgUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.eco,
+                            size: 40, color: AppColors.green700))
                     : const Icon(Icons.eco, size: 40, color: AppColors.green700),
               ),
             ),
@@ -49,7 +63,7 @@ class ProductCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: AppColors.ink)),
                   const SizedBox(height: 4),
-                  Text('${product.finalPrice.toStringAsFixed(0)}₫',
+                  Text(_formatPrice(product.finalPrice),
                       style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,

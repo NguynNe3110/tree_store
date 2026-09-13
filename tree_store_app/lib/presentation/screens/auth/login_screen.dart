@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 4),
                       const Text('Đăng nhập để tiếp tục hành trình xanh', style: TextStyle(fontSize: 14, color: AppColors.muted)),
                       const SizedBox(height: 24),
-                      TextField(controller: _email, decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline, color: AppColors.muted), hintText: 'email@verdant.vn')),
+                      TextField(controller: _email, decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline, color: AppColors.muted), hintText: 'email@verdant.vn', hintStyle: TextStyle(color: Colors.black26))),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _pass,
@@ -61,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.lock_outline, color: AppColors.muted),
                           hintText: '••••••••',
+                          hintStyle: const TextStyle(color: Colors.black26),
                           suffixIcon: IconButton(icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, color: AppColors.muted), onPressed: () => setState(() => _obscure = !_obscure)),
                         ),
                       ),

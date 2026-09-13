@@ -10,9 +10,9 @@ class HomeRepositoryImpl implements HomeRepository {
   HomeRepositoryImpl(this._remote);
 
   @override
-  Future<Either<Failure, HomeSduiResponse>> getHomeBlocks() async {
+  Future<Either<Failure, HomeSduiResponse>> getHomeBlocks({String? categoryId}) async {
     try {
-      final response = await _remote.getHomeBlocks();
+      final response = await _remote.getHomeBlocks(categoryId: categoryId);
       return Right(response);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionTimeout ||

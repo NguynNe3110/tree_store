@@ -638,10 +638,15 @@ fun Route.profileRoutes() {
 fun Route.homeRoutes() {
     get("/api/home", {
         summary = "Get home screen SDUI blocks"
+        request {
+            queryParameter<String>("categoryId")
+        }
         response {
             code(HttpStatusCode.OK) { description = "Home screen UI blocks" }
         }
     }) {
+        val categoryIdParam = call.request.queryParameters["categoryId"]
+        
         val blocks = transaction {
             UiBlocks.selectAll().where { (UiBlocks.screenKey eq "home") and (UiBlocks.isActive eq true) }
                 .orderBy(UiBlocks.sortOrder to SortOrder.ASC).map { row ->
@@ -654,6 +659,7 @@ fun Route.homeRoutes() {
                     )
                 }
         }
+        
         // ponytail: fallback hardcoded SDUI when DB empty. remove after seeding ui_blocks table
         val baseBlocks = if (blocks.isEmpty()) {
             val fallbackJson = kotlinx.serialization.json.Json
@@ -662,7 +668,7 @@ fun Route.homeRoutes() {
                 UiBlockDto("seed-2", "quick_actions", null, fallbackJson.parseToJsonElement("""{"items":[{"icon":"🏠","label":"Trong nha"},{"icon":"🌳","label":"Ngoai troi"},{"icon":"🌵","label":"Sen da"},{"icon":"🪴","label":"Chau"}]}""").jsonObject, null, 1),
                 UiBlockDto("seed-3", "flash_sale_strip", null, fallbackJson.parseToJsonElement("""{"title":"Flash Sale hom nay","subtitle":"Ket thuc trong","hours":2,"minutes":18,"seconds":45}""").jsonObject, null, 2),
                 UiBlockDto("seed-4", "featured_hero", null, fallbackJson.parseToJsonElement("""{"label":"CAY CUA THANG","name":"Trau ba Nam My","desc":"De cham, thanh loc khong khi tot","price":"450.000₫","imageUrl":"monstera_hero.jpg"}""").jsonObject, null, 3),
-                UiBlockDto("seed-5", "category_tabs", null, fallbackJson.parseToJsonElement("""{"categories":["Tat ca","Cay la","Sen da","Bonsai"]}""").jsonObject, null, 4),
+                UiBlockDto("seed-5", "category_tabs", null, fallbackJson.parseToJsonElement("""{"categories":[]}""").jsonObject, null, 4),
                 UiBlockDto("seed-6", "product_horizontal_list", "Ban chay tuan nay", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, null, 5),
                 UiBlockDto("seed-7", "care_tip_card", null, fallbackJson.parseToJsonElement("""{"icon":"💧","title":"Meo tuoi cay mua kho","subtitle":"5 dau hieu cay dang khat nuoc"}""").jsonObject, null, 6),
                 UiBlockDto("seed-8", "product_grid", "Tat ca san pham", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, null, 7)
@@ -670,20 +676,37 @@ fun Route.homeRoutes() {
         } else blocks
 
         val allTrees = transaction {
-            Trees.selectAll().where { Trees.isActive eq true }
-                .orderBy(Trees.createdAt to SortOrder.DESC).limit(20).map { row ->
-                    val price = row[Trees.price].toDouble()
-                    val formattedPrice = "%,.0f\u20AB".format(price).replace(",", ".")
+            var query = Trees.selectAll().where { Trees.isActive eq true }
+            if (categoryIdParam != null && categoryIdParam != "all") {
+                query = query.andWhere { Trees.categoryId eq UUID.fromString(categoryIdParam) }
+            }
+            
+            query.orderBy(Trees.createdAt to SortOrder.DESC).limit(20).map { row ->
+                val price = row[Trees.price].toDouble()
+                val formattedPrice = "%,.0f\u20AB".format(price).replace(",", ".")
+                kotlinx.serialization.json.buildJsonObject {
+                    put("id", kotlinx.serialization.json.JsonPrimitive(row[Trees.id].toString()))
+                    put("name", kotlinx.serialization.json.JsonPrimitive(row[Trees.name]))
+                    put("price", kotlinx.serialization.json.JsonPrimitive(formattedPrice))
+                    put("sub", kotlinx.serialization.json.JsonPrimitive(row[Trees.description] ?: ""))
+                    put("imageUrl", kotlinx.serialization.json.JsonPrimitive(row[Trees.coverImageUrl] ?: ""))
+                }
+            }
+        }
+        
+        val categories = transaction {
+            Categories.selectAll().where { Categories.isActive eq true }
+                .orderBy(Categories.sortOrder to SortOrder.ASC).map { row ->
                     kotlinx.serialization.json.buildJsonObject {
-                        put("id", kotlinx.serialization.json.JsonPrimitive(row[Trees.id].toString()))
-                        put("name", kotlinx.serialization.json.JsonPrimitive(row[Trees.name]))
-                        put("price", kotlinx.serialization.json.JsonPrimitive(formattedPrice))
-                        put("sub", kotlinx.serialization.json.JsonPrimitive(row[Trees.description] ?: ""))
-                        put("imageUrl", kotlinx.serialization.json.JsonPrimitive(row[Trees.coverImageUrl] ?: ""))
+                        put("id", kotlinx.serialization.json.JsonPrimitive(row[Categories.id].toString()))
+                        put("name", kotlinx.serialization.json.JsonPrimitive(row[Categories.name]))
                     }
                 }
         }
+        
         val productsArray = kotlinx.serialization.json.JsonArray(allTrees)
+        val categoriesArray = kotlinx.serialization.json.JsonArray(categories)
+        
         val enrichedBlocks = baseBlocks.map { block ->
             val action = when (block.blockType) {
                 "banner_carousel" -> kotlinx.serialization.json.buildJsonObject {
@@ -701,14 +724,24 @@ fun Route.homeRoutes() {
                 }
                 else -> null
             }
-            if (block.blockType == "product_horizontal_list" || block.blockType == "product_grid") {
-                val newPayload = kotlinx.serialization.json.buildJsonObject {
-                    block.payload.forEach { (k, v) -> put(k, v) }
-                    put("products", productsArray)
+            
+            when (block.blockType) {
+                "product_horizontal_list", "product_grid" -> {
+                    val newPayload = kotlinx.serialization.json.buildJsonObject {
+                        block.payload.forEach { (k, v) -> put(k, v) }
+                        put("products", productsArray)
+                    }
+                    block.copy(payload = newPayload, action = action)
                 }
-                block.copy(payload = newPayload, action = action)
-            } else {
-                block.copy(action = action)
+                "category_tabs" -> {
+                    val newPayload = kotlinx.serialization.json.buildJsonObject {
+                        put("categories", categoriesArray)
+                    }
+                    block.copy(payload = newPayload)
+                }
+                else -> {
+                    block.copy(action = action)
+                }
             }
         }
         call.respond(HomeSduiResponse(enrichedBlocks))
