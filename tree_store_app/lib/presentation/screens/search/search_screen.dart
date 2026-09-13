@@ -17,6 +17,12 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    context.read<SearchBloc>().add(const SearchLoadSuggestions());
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     _ctrl.dispose();
@@ -53,7 +59,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         icon: const Icon(Icons.close, size: 18, color: AppColors.muted),
                         onPressed: () {
                           _ctrl.clear();
-                          context.read<SearchBloc>().add(const SearchQuery(''));
+                          context.read<SearchBloc>().add(const SearchLoadSuggestions());
                         },
                       ),
               ),
@@ -62,63 +68,63 @@ class _SearchScreenState extends State<SearchScreen> {
           Expanded(
             child: BlocBuilder<SearchBloc, SearchState>(
               builder: (context, state) {
-                if (state is SearchInitial) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.search, size: 64, color: AppColors.line),
-                          SizedBox(height: 12),
-                          Text('Nhập tên cây để tìm kiếm', style: TextStyle(fontSize: 14, color: AppColors.muted)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
                 if (state is SearchLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (state is SearchError) {
                   return Center(child: Text(state.message, style: const TextStyle(color: AppColors.terra)));
                 }
-                if (state is SearchLoaded) {
-                  final results = state.results;
-                  if (results.isEmpty) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.search_off, size: 64, color: AppColors.line),
-                            SizedBox(height: 12),
-                            Text('Không tìm thấy cây nào', style: TextStyle(fontSize: 14, color: AppColors.muted)),
-                          ],
-                        ),
+                
+                final isSuggestions = state is SearchSuggestionsLoaded;
+                final items = state is SearchSuggestionsLoaded ? state.suggestions : (state is SearchLoaded ? state.results : []);
+
+                if (items.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(isSuggestions ? Icons.search : Icons.search_off, size: 64, color: AppColors.line),
+                          const SizedBox(height: 12),
+                          Text(isSuggestions ? 'Nhập tên cây để tìm kiếm' : 'Không tìm thấy cây nào', style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+                        ],
                       ),
-                    );
-                  }
-                  return GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.7,
                     ),
-                    itemCount: results.length,
-                    itemBuilder: (_, i) {
-                      final p = results[i];
-                      return ProductCard(
-                        product: p,
-                        onTap: () => context.push('/product/${p.id}'),
-                      );
-                    },
                   );
                 }
-                return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Text(
+                        isSuggestions ? 'Gợi ý cho bạn' : 'Kết quả tìm kiếm (${items.length})',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink2),
+                      ),
+                    ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.7,
+                        ),
+                        itemCount: items.length,
+                        itemBuilder: (_, i) {
+                          final p = items[i];
+                          return ProductCard(
+                            product: p,
+                            onTap: () => context.push('/product/${p.id}'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
               },
             ),
           ),

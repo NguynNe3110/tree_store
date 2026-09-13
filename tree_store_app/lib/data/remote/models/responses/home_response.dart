@@ -3,6 +3,7 @@ class UiBlockResponse {
   final String blockType;
   final String? title;
   final Map<String, dynamic> payload;
+  final Map<String, dynamic>? action;
   final int sortOrder;
 
   const UiBlockResponse({
@@ -10,6 +11,7 @@ class UiBlockResponse {
     required this.blockType,
     this.title,
     this.payload = const {},
+    this.action,
     this.sortOrder = 0,
   });
 
@@ -19,6 +21,7 @@ class UiBlockResponse {
       blockType: json['blockType'] as String? ?? '',
       title: json['title'] as String?,
       payload: json['payload'] as Map<String, dynamic>? ?? {},
+      action: json['action'] as Map<String, dynamic>?,
       sortOrder: json['sortOrder'] as int? ?? 0,
     );
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/image_url.dart';
 import '../../blocs/profile_bloc.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -32,6 +34,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _phoneCtrl = TextEditingController(text: phone);
       _emailCtrl = TextEditingController(text: email);
       _initialized = true;
+    }
+  }
+
+  Future<void> _onChangeAvatar() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null && mounted) {
+      context.read<ProfileBloc>().add(ProfileUpdateAvatar(image.path));
     }
   }
 
@@ -102,13 +112,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _initControllers(user.fullName, user.phoneNumber ?? '', user.email ?? '');
           // ponytail: gender, birthday, notification toggles not in backend User entity yet. upgrade when backend supports them
           final initials = user.fullName.isNotEmpty ? user.fullName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join().toUpperCase() : '?';
+          final shortInitials = initials.length > 2 ? initials.substring(0, 2) : initials;
+          final avatarUrl = user.avatarUrl != null ? resolveImageUrl(user.avatarUrl) : '';
+
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Center(child: Stack(children: [
-                Container(width: 88, height: 88, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.green100), child: Center(child: Text(initials.length > 2 ? initials.substring(0, 2) : initials, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.green700)))),
-                Positioned(bottom: 0, right: 0, child: Container(width: 28, height: 28, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, border: Border.all(color: AppColors.line)), child: const Icon(Icons.edit, size: 14, color: AppColors.green700))),
-              ])),
+              Center(
+                child: GestureDetector(
+                  onTap: _onChangeAvatar,
+                  child: Stack(children: [
+                    Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.green100),
+                      child: ClipOval(
+                        child: avatarUrl.isEmpty
+                            ? Center(child: Text(shortInitials, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: AppColors.green700)))
+                            : Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Center(child: Text(shortInitials))),
+                      ),
+                    ),
+                    Positioned(bottom: 0, right: 0, child: Container(width: 28, height: 28, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, border: Border.all(color: AppColors.line)), child: const Icon(Icons.edit, size: 14, color: AppColors.green700))),
+                  ]),
+                ),
+              ),
               const SizedBox(height: 8),
               const Center(child: Text('Đổi ảnh đại diện', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green700))),
               const SizedBox(height: 24),

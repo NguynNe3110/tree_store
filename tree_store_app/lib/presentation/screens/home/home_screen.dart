@@ -34,11 +34,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (context, state) {
                     final user = state is ProfileLoaded ? state.user : (state is ProfileUpdated ? state.user : null);
                     final name = user?.fullName ?? '...';
+                    final avatarUrl = user?.avatarUrl != null ? resolveImageUrl(user!.avatarUrl) : '';
                     final parts = name.trim().split(' ');
                     final initials = parts.isNotEmpty && parts.first.isNotEmpty ? (parts.length > 1 ? '${parts.first[0]}${parts.last[0]}'.toUpperCase() : parts.first[0].toUpperCase()) : '?';
                     return Row(
                       children: [
-                        CircleAvatar(radius: 20, backgroundColor: AppColors.green50, child: Text(initials, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.green700))),
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.green50,
+                          backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                          child: avatarUrl.isEmpty ? Text(initials, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.green700)) : null,
+                        ),
                         const SizedBox(width: 12),
                         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Xin chào 🌱', style: TextStyle(fontSize: 12, color: AppColors.muted)), Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink))]),
                         const Spacer(),
@@ -49,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: TextField(decoration: InputDecoration(prefixIcon: const Icon(Icons.search, color: AppColors.muted), hintText: 'Tìm cây, chậu, phụ kiện...', fillColor: AppColors.green50, filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none))))),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // SDUI blocks
             BlocBuilder<HomeBloc, HomeState>(
@@ -63,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (state is HomeLoaded) {
                   return SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (_, i) => _buildBlock(state.blocks[i]),
+                      (_, i) => _buildBlock(context, state.blocks[i]),
                       childCount: state.blocks.length,
                     ),
                   );
@@ -78,12 +84,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBlock(UiBlockResponse block) {
+  Widget _buildBlock(BuildContext context, UiBlockResponse block) {
     switch (block.blockType) {
       case 'banner_carousel':
-        return _BannerCarousel(block);
+        return _BannerCarousel(block, onAction: (a) => _handleAction(context, a));
       case 'quick_actions':
-        return _QuickActions(block);
+        return _QuickActions(block, onAction: (a) => _handleAction(context, a));
       case 'flash_sale_strip':
         return _FlashSaleStrip(block);
       case 'category_tabs':
@@ -91,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'product_horizontal_list':
         return _ProductHorizontalList(block);
       case 'featured_hero':
-        return _FeaturedHero(block);
+        return _FeaturedHero(block, onAction: (a) => _handleAction(context, a));
       case 'care_tip_card':
         return _CareTipCard(block);
       case 'bundle_offer':
@@ -104,13 +110,23 @@ class _HomeScreenState extends State<HomeScreen> {
         return const SizedBox.shrink();
     }
   }
+
+  void _handleAction(BuildContext context, Map<String, dynamic>? action) {
+    if (action == null) return;
+    final type = action['type'];
+    final path = action['path'];
+    if (type == 'navigate' && path is String) {
+      context.push(path);
+    }
+  }
 }
 
 // ponytail: minimal SDUI widgets matching HTML mockup structure. upgrade to dedicated widget files when sections grow complex
 
 class _BannerCarousel extends StatelessWidget {
   final UiBlockResponse block;
-  const _BannerCarousel(this.block);
+  final Function(Map<String, dynamic>?) onAction;
+  const _BannerCarousel(this.block, {required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -119,24 +135,27 @@ class _BannerCarousel extends StatelessWidget {
     final b = banners.first as Map<String, dynamic>;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        height: 140,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppColors.green700, AppColors.green600]),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            if (b['tag'] != null)
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)), child: Text(b['tag'], style: const TextStyle(fontSize: 10, color: Colors.white, fontFamily: 'monospace'))),
-            Text(b['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 2),
-            Text(b['subtitle'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-            if (b['cta'] != null)
-              Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Text(b['cta'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green700))),
-          ],
+      child: GestureDetector(
+        onTap: () => onAction(block.action),
+        child: Container(
+          height: 140,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [AppColors.green700, AppColors.green600]),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (b['tag'] != null)
+                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)), child: Text(b['tag'], style: const TextStyle(fontSize: 10, color: Colors.white, fontFamily: 'monospace'))),
+              Text(b['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 2),
+              Text(b['subtitle'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              if (b['cta'] != null)
+                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Text(b['cta'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green700))),
+            ],
+          ),
         ),
       ),
     );
@@ -145,7 +164,8 @@ class _BannerCarousel extends StatelessWidget {
 
 class _QuickActions extends StatelessWidget {
   final UiBlockResponse block;
-  const _QuickActions(this.block);
+  final Function(Map<String, dynamic>?) onAction;
+  const _QuickActions(this.block, {required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -158,15 +178,18 @@ class _QuickActions extends StatelessWidget {
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line2)),
-                child: Column(
-                  children: [
-                    Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(12)), child: Center(child: Text(m['icon'] ?? '', style: const TextStyle(fontSize: 20)))),
-                    const SizedBox(height: 6),
-                    Text(m['label'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.ink2), textAlign: TextAlign.center),
-                  ],
+              child: GestureDetector(
+                onTap: () => onAction(block.action),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.line2)),
+                  child: Column(
+                    children: [
+                      Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(12)), child: Center(child: Text(m['icon'] ?? '', style: const TextStyle(fontSize: 20)))),
+                      const SizedBox(height: 6),
+                      Text(m['label'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.ink2), textAlign: TextAlign.center),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -317,7 +340,8 @@ class _ProductHorizontalList extends StatelessWidget {
 
 class _FeaturedHero extends StatelessWidget {
   final UiBlockResponse block;
-  const _FeaturedHero(this.block);
+  final Function(Map<String, dynamic>?) onAction;
+  const _FeaturedHero(this.block, {required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +368,10 @@ class _FeaturedHero extends StatelessWidget {
                     children: [
                       Text(block.payload['price'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.green700)),
                       const Spacer(),
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(12)), child: const Text('Xem chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
+                      GestureDetector(
+                        onTap: () => onAction(block.action),
+                        child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(12)), child: const Text('Xem chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white))),
+                      ),
                     ],
                   ),
                 ],

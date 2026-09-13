@@ -12,6 +12,8 @@ abstract class TreeRepository {
     int limit = 20,
   });
 
+  Future<Either<Failure, List<Product>>> getFeaturedTrees();
+
   Future<Either<Failure, Product>> getTreeDetail(String id);
 
   Future<Either<Failure, List<Category>>> getCategories();

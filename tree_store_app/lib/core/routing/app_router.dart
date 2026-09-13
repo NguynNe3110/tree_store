@@ -17,6 +17,7 @@ import '../../presentation/screens/profile/profile_screen.dart';
 import '../../presentation/screens/profile/edit_profile_screen.dart';
 import '../../presentation/screens/profile/address_list_screen.dart';
 import '../../presentation/screens/profile/add_address_screen.dart';
+import '../../domain/entities/product.dart';
 import '../network/token_storage.dart';
 
 // ponytail: simple sync flag for auth guard. upgrade to stream/BLoC when real auth state needed
@@ -54,7 +55,13 @@ GoRouter createRouter(TokenStorage tokenStorage) {
         ],
       ),
       GoRoute(path: '/product/:id', builder: (_, s) => ProductDetailScreen(id: s.pathParameters['id']!)),
-      GoRoute(path: '/checkout', builder: (_, __) => const CheckoutScreen()),
+      GoRoute(path: '/checkout', builder: (_, s) {
+        final extra = s.extra as Map<String, dynamic>?;
+        return CheckoutScreen(
+          singleItem: extra?['singleItem'] as Product?,
+          quantity: extra?['quantity'] as int? ?? 1,
+        );
+      }),
       GoRoute(path: '/order-success', builder: (_, s) => OrderSuccessScreen(orderId: s.uri.queryParameters['id'] ?? '')),
       GoRoute(path: '/orders', builder: (_, __) => const OrderHistoryScreen()),
       GoRoute(path: '/order/:id', builder: (_, s) => OrderDetailScreen(id: s.pathParameters['id']!)),

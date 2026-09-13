@@ -31,6 +31,12 @@ class TreeRemoteDataSource {
         .toList();
   }
 
+  Future<List<TreeResponseDto>> getFeaturedTrees() async {
+    final res = await _dio.get(ApiEndpoints.featuredTrees);
+    final raw = res.data is List ? (res.data as List) : const [];
+    return raw.whereType<Map<String, dynamic>>().map(TreeResponseDto.fromJson).toList();
+  }
+
   Future<TreeResponseDto> getTreeDetail(String id) async {
     final res = await _dio.get(
       ApiEndpoints.treeDetail.replaceAll('{id}', id),

@@ -37,6 +37,18 @@ class TreeRepositoryImpl implements TreeRepository {
   }
 
   @override
+  Future<Either<Failure, List<Product>>> getFeaturedTrees() async {
+    try {
+      final dtos = await _remote.getFeaturedTrees();
+      return Right(dtos.map((d) => d.toEntity()).toList());
+    } on DioException catch (e) {
+      return Left(_mapDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Product>> getTreeDetail(String id) async {
     try {
       final dto = await _remote.getTreeDetail(id);

@@ -61,8 +61,9 @@ class _AddressListScreenState extends State<AddressListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final added = await context.push<bool>('/add-address');
-          if (!mounted) return;
-          if (added == true) setState(() => _future = _load());
+          if (added == true && mounted) {
+            setState(() => _future = _load());
+          }
         },
         backgroundColor: AppColors.green700,
         child: const Icon(Icons.add, color: Colors.white, size: 26),
@@ -71,32 +72,45 @@ class _AddressListScreenState extends State<AddressListScreen> {
   }
 
   Widget _card(Address a) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.paper,
-        borderRadius: BorderRadius.circular(16),
-        border: a.isDefault ? Border.all(color: AppColors.green500, width: 1.5) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(a.receiverName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 8),
-              if (a.isDefault)
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(6)), child: const Text('MẶC ĐỊNH', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
-              if (a.label != null && a.label!.isNotEmpty)
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(6)), child: Text(a.label!.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.green700))),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(a.phoneNumber, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-          const SizedBox(height: 4),
-          Text(a.fullAddress, style: const TextStyle(fontSize: 13, color: AppColors.ink2, height: 1.5)),
-        ],
+    return GestureDetector(
+      onTap: () => context.pop(a), // Return selected address to Checkout
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(16),
+          border: a.isDefault ? Border.all(color: AppColors.green500, width: 1.5) : Border.all(color: AppColors.line2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(a.receiverName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 8),
+                if (a.isDefault)
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.green700, borderRadius: BorderRadius.circular(6)), child: const Text('MẶC ĐỊNH', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                if (a.label != null && a.label!.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(6)), child: Text(a.label!.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.green700))),
+                ]
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(a.phoneNumber, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+            const SizedBox(height: 4),
+            Text(a.fullAddress, style: const TextStyle(fontSize: 13, color: AppColors.ink2, height: 1.5)),
+            const Divider(height: 24, color: AppColors.line2),
+            Row(
+              children: [
+                const Text('Sửa', style: TextStyle(fontSize: 12, color: AppColors.green700, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 20),
+                const Text('Xoá', style: TextStyle(fontSize: 12, color: AppColors.terra, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

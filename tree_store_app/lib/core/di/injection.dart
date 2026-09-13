@@ -33,6 +33,8 @@ import '../../domain/usecases/profile/add_address_usecase.dart';
 import '../../domain/usecases/profile/get_addresses_usecase.dart';
 import '../../domain/usecases/profile/get_profile_usecase.dart';
 import '../../domain/usecases/profile/update_profile_usecase.dart';
+import '../../domain/usecases/profile/upload_avatar_usecase.dart';
+import '../../domain/usecases/tree/get_featured_trees_usecase.dart';
 import '../../domain/usecases/tree/get_tree_detail_usecase.dart';
 import '../../domain/usecases/tree/get_trees_usecase.dart';
 import '../../presentation/blocs/auth_bloc.dart';
@@ -80,6 +82,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => RegisterUsecase(sl()));
   sl.registerFactory(() => LogoutUsecase(sl()));
   sl.registerFactory(() => GetTreesUsecase(sl()));
+  sl.registerFactory(() => GetFeaturedTreesUsecase(sl()));
   sl.registerFactory(() => GetTreeDetailUsecase(sl()));
   sl.registerFactory(() => GetCartUsecase(sl()));
   sl.registerFactory(() => AddToCartUsecase(sl()));
@@ -88,6 +91,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => GetOrdersUsecase(sl()));
   sl.registerFactory(() => GetProfileUsecase(sl()));
   sl.registerFactory(() => UpdateProfileUsecase(sl()));
+  sl.registerFactory(() => UploadAvatarUsecase(sl()));
   sl.registerFactory(() => GetAddressesUsecase(sl()));
   sl.registerFactory(() => AddAddressUsecase(sl()));
   sl.registerFactory(() => GetHomeBlocksUsecase(sl()));
@@ -106,7 +110,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => OtpBloc(sendOtp: sl(), verifyOtp: sl()));
   sl.registerFactory(() => CartBloc(getCart: sl(), addToCart: sl(), removeFromCart: sl()));
   sl.registerFactory(() => OrderBloc(getOrders: sl(), createOrder: sl()));
-  sl.registerFactory(() => ProfileBloc(getProfile: sl(), updateProfile: sl()));
+  sl.registerFactory(() => ProfileBloc(getProfile: sl(), updateProfile: sl(), uploadAvatar: sl()));
   sl.registerFactory(() => TreeBloc(getTreeDetail: sl()));
-  sl.registerFactory(() => SearchBloc(getTrees: sl()));
+  sl.registerFactory(() => SearchBloc(getTrees: sl(), getFeatured: sl()));
 }

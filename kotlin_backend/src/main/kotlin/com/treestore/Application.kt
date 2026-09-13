@@ -108,6 +108,9 @@ fun Application.module() {
         // ponytail: serve SDUI dashboard HTML for MVP
         static("/") {
             resources("static")
+            // Also serve from actual file system for immediate access after upload
+            staticRootFolder = java.io.File("src/main/resources/static")
+            files("uploads")
         }
     }
 }

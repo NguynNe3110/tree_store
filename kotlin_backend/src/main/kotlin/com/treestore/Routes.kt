@@ -10,6 +10,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.http.content.*
 import io.github.smiley4.ktoropenapi.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -208,7 +209,7 @@ fun Route.treeRoutes() {
                 if (categoryId != null) query = query.andWhere { Trees.categoryId eq UUID.fromString(categoryId) }
                 if (status != null) query = query.andWhere { Trees.status eq status }
                 else query = query.andWhere { Trees.status eq "available" }
-                if (keyword != null) query = query.andWhere { Trees.name like "%{keyword}%" }
+                if (keyword != null) query = query.andWhere { Trees.name.lowerCase() like "%${keyword.lowercase()}%" }
                 val total = query.count()
                 val data = query.limit(limit, offset).orderBy(Trees.createdAt to SortOrder.DESC).map { row ->
                     TreeDto(
@@ -227,6 +228,32 @@ fun Route.treeRoutes() {
             }
             call.respond(TreeListResponse(trees.first, page, limit, trees.second))
         }
+
+        get("/featured", {
+            summary = "Get featured trees for suggestions"
+            response {
+                code(HttpStatusCode.OK) { description = "List of featured trees" }
+            }
+        }) {
+            val trees = transaction {
+                Trees.selectAll().where { (Trees.isActive eq true) and (Trees.isFeatured eq true) }
+                    .orderBy(Trees.createdAt to SortOrder.DESC).limit(10).map { row ->
+                        TreeDto(
+                            id = row[Trees.id].toString(), name = row[Trees.name],
+                            description = row[Trees.description], categoryId = row[Trees.categoryId]?.toString(),
+                            price = row[Trees.price].toDouble(), discountPrice = row[Trees.discountPrice]?.toDouble(),
+                            stockQuantity = row[Trees.stockQuantity], status = row[Trees.status],
+                            heightCm = row[Trees.heightCm], potDiameterCm = row[Trees.potDiameterCm],
+                            trunkDiameterCm = row[Trees.trunkDiameterCm], ageYears = row[Trees.ageYears],
+                            location = row[Trees.location], careNote = row[Trees.careNote],
+                            tags = emptyList(), coverImageUrl = row[Trees.coverImageUrl],
+                            isFeatured = row[Trees.isFeatured], isActive = row[Trees.isActive]
+                        )
+                    }
+            }
+            call.respond(trees)
+        }
+
         get("/{id}", {
             summary = "Get tree detail by ID"
             request {
@@ -468,6 +495,8 @@ fun Route.orderRoutes() {
                         Trees.update({ Trees.id eq treeUuid }) {
                             with(SqlExpressionBuilder) { it[stockQuantity] = Trees.stockQuantity - item.quantity }
                         }
+                        // ponytail: if order item matches cart, clear it
+                        CartItems.deleteWhere { (CartItems.userId eq userId) and (CartItems.treeId eq treeUuid) }
                     }
                 }
                 call.respond(HttpStatusCode.Created, mapOf("id" to orderId.toString(), "message" to "Order created"))
@@ -520,6 +549,39 @@ fun Route.profileRoutes() {
                 if (profile == null) call.respond(HttpStatusCode.NotFound, ApiError("Profile not found"))
                 else call.respond(profile)
             }
+
+            post("/avatar", {
+                summary = "Upload user avatar"
+                response {
+                    code(HttpStatusCode.OK) { description = "Avatar uploaded" }
+                    code(HttpStatusCode.BadRequest) { description = "Invalid upload" }
+                }
+            }) {
+                val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
+                val multipart = call.receiveMultipart()
+                var fileName = ""
+                multipart.forEachPart { part ->
+                    if (part is PartData.FileItem) {
+                        val ext = part.originalFileName?.substringAfterLast(".", "jpg") ?: "jpg"
+                        fileName = "avatar-$userId-${System.currentTimeMillis()}.$ext"
+                        // ponytail: save to static/uploads for dev MVP. In production use S3/CDN.
+                        val file = java.io.File("src/main/resources/static/uploads/$fileName")
+                        file.parentFile.mkdirs()
+                        part.streamProvider().use { its -> file.outputStream().buffered().use { out -> its.copyTo(out) } }
+                    }
+                    part.dispose()
+                }
+                if (fileName.isNotEmpty()) {
+                    val url = "/uploads/$fileName"
+                    transaction {
+                        Profiles.update({ Profiles.id eq userId }) { it[avatarUrl] = url }
+                    }
+                    call.respond(UploadResponse(url))
+                } else {
+                    call.respond(HttpStatusCode.BadRequest, ApiError("No file uploaded"))
+                }
+            }
+
             route("/addresses") {
                 get({
                     summary = "List current user addresses"
@@ -596,14 +658,14 @@ fun Route.homeRoutes() {
         val baseBlocks = if (blocks.isEmpty()) {
             val fallbackJson = kotlinx.serialization.json.Json
             listOf(
-                UiBlockDto("seed-1", "banner_carousel", null, fallbackJson.parseToJsonElement("""{"banners":[{"tag":"SALE 20%","title":"Mang thien nhien vao nha ban","subtitle":"Giam 20% cho don hang dau tien","cta":"Mua ngay"}]}""").jsonObject, 0),
-                UiBlockDto("seed-2", "quick_actions", null, fallbackJson.parseToJsonElement("""{"items":[{"icon":"🏠","label":"Trong nha"},{"icon":"🌳","label":"Ngoai troi"},{"icon":"🌵","label":"Sen da"},{"icon":"🪴","label":"Chau"}]}""").jsonObject, 1),
-                UiBlockDto("seed-3", "flash_sale_strip", null, fallbackJson.parseToJsonElement("""{"title":"Flash Sale hom nay","subtitle":"Ket thuc trong","hours":2,"minutes":18,"seconds":45}""").jsonObject, 2),
-                UiBlockDto("seed-4", "featured_hero", null, fallbackJson.parseToJsonElement("""{"label":"CAY CUA THANG","name":"Trau ba Nam My","desc":"De cham, thanh loc khong khi tot","price":"450.000₫","imageUrl":"monstera_hero.jpg"}""").jsonObject, 3),
-                UiBlockDto("seed-5", "category_tabs", null, fallbackJson.parseToJsonElement("""{"categories":["Tat ca","Cay la","Sen da","Bonsai"]}""").jsonObject, 4),
-                UiBlockDto("seed-6", "product_horizontal_list", "Ban chay tuan nay", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, 5),
-                UiBlockDto("seed-7", "care_tip_card", null, fallbackJson.parseToJsonElement("""{"icon":"💧","title":"Meo tuoi cay mua kho","subtitle":"5 dau hieu cay dang khat nuoc"}""").jsonObject, 6),
-                UiBlockDto("seed-8", "product_grid", "Tat ca san pham", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, 7)
+                UiBlockDto("seed-1", "banner_carousel", null, fallbackJson.parseToJsonElement("""{"banners":[{"tag":"SALE 20%","title":"Mang thien nhien vao nha ban","subtitle":"Giam 20% cho don hang dau tien","cta":"Mua ngay"}]}""").jsonObject, null, 0),
+                UiBlockDto("seed-2", "quick_actions", null, fallbackJson.parseToJsonElement("""{"items":[{"icon":"🏠","label":"Trong nha"},{"icon":"🌳","label":"Ngoai troi"},{"icon":"🌵","label":"Sen da"},{"icon":"🪴","label":"Chau"}]}""").jsonObject, null, 1),
+                UiBlockDto("seed-3", "flash_sale_strip", null, fallbackJson.parseToJsonElement("""{"title":"Flash Sale hom nay","subtitle":"Ket thuc trong","hours":2,"minutes":18,"seconds":45}""").jsonObject, null, 2),
+                UiBlockDto("seed-4", "featured_hero", null, fallbackJson.parseToJsonElement("""{"label":"CAY CUA THANG","name":"Trau ba Nam My","desc":"De cham, thanh loc khong khi tot","price":"450.000₫","imageUrl":"monstera_hero.jpg"}""").jsonObject, null, 3),
+                UiBlockDto("seed-5", "category_tabs", null, fallbackJson.parseToJsonElement("""{"categories":["Tat ca","Cay la","Sen da","Bonsai"]}""").jsonObject, null, 4),
+                UiBlockDto("seed-6", "product_horizontal_list", "Ban chay tuan nay", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, null, 5),
+                UiBlockDto("seed-7", "care_tip_card", null, fallbackJson.parseToJsonElement("""{"icon":"💧","title":"Meo tuoi cay mua kho","subtitle":"5 dau hieu cay dang khat nuoc"}""").jsonObject, null, 6),
+                UiBlockDto("seed-8", "product_grid", "Tat ca san pham", fallbackJson.parseToJsonElement("""{"products":[]}""").jsonObject, null, 7)
             )
         } else blocks
 
@@ -623,13 +685,31 @@ fun Route.homeRoutes() {
         }
         val productsArray = kotlinx.serialization.json.JsonArray(allTrees)
         val enrichedBlocks = baseBlocks.map { block ->
+            val action = when (block.blockType) {
+                "banner_carousel" -> kotlinx.serialization.json.buildJsonObject {
+                    put("type", kotlinx.serialization.json.JsonPrimitive("navigate"))
+                    put("path", kotlinx.serialization.json.JsonPrimitive("/search"))
+                }
+                "featured_hero" -> kotlinx.serialization.json.buildJsonObject {
+                    val firstId = allTrees.firstOrNull()?.get("id")?.toString()?.replace("\"", "") ?: ""
+                    put("type", kotlinx.serialization.json.JsonPrimitive("navigate"))
+                    put("path", kotlinx.serialization.json.JsonPrimitive("/product/$firstId"))
+                }
+                "quick_actions" -> kotlinx.serialization.json.buildJsonObject {
+                    put("type", kotlinx.serialization.json.JsonPrimitive("navigate"))
+                    put("path", kotlinx.serialization.json.JsonPrimitive("/search"))
+                }
+                else -> null
+            }
             if (block.blockType == "product_horizontal_list" || block.blockType == "product_grid") {
                 val newPayload = kotlinx.serialization.json.buildJsonObject {
                     block.payload.forEach { (k, v) -> put(k, v) }
                     put("products", productsArray)
                 }
-                block.copy(payload = newPayload)
-            } else block
+                block.copy(payload = newPayload, action = action)
+            } else {
+                block.copy(action = action)
+            }
         }
         call.respond(HomeSduiResponse(enrichedBlocks))
     }

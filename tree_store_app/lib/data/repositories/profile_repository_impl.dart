@@ -45,6 +45,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
+  Future<Either<Failure, String>> uploadAvatar(String filePath) async {
+    try {
+      final url = await _remote.uploadAvatar(filePath);
+      return Right(url);
+    } on DioException catch (e) {
+      return Left(_mapDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<Address>>> getAddresses() async {
     try {
       final dtos = await _remote.getAddresses();

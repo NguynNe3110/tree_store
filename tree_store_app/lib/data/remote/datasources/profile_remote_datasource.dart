@@ -30,6 +30,14 @@ class ProfileRemoteDataSource {
     return UserResponseDto.fromJson(data);
   }
 
+  Future<String> uploadAvatar(String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+    final res = await _dio.post(ApiEndpoints.avatar, data: formData);
+    return res.data['url']?.toString() ?? '';
+  }
+
   Future<List<AddressResponseDto>> getAddresses() async {
     final res = await _dio.get(ApiEndpoints.addresses);
     final raw = (res.data as List?) ?? const [];

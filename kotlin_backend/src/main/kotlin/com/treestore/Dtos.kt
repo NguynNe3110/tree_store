@@ -167,11 +167,15 @@ data class ResetPasswordRequest(val email: String, val code: String, val newPass
 data class OtpResponse(val message: String, val expiresInSeconds: Int = 300)
 
 @Serializable
+data class UploadResponse(val url: String)
+
+@Serializable
 data class UiBlockDto(
     val id: String,
     val blockType: String,
     val title: String? = null,
     val payload: kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.JsonObject(emptyMap()),
+    val action: kotlinx.serialization.json.JsonObject? = null,
     val sortOrder: Int = 0
 )
 

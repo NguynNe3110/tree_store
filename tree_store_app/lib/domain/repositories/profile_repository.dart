@@ -10,6 +10,7 @@ abstract class ProfileRepository {
     String? phoneNumber,
     String? avatarUrl,
   });
+  Future<Either<Failure, String>> uploadAvatar(String filePath);
   Future<Either<Failure, List<Address>>> getAddresses();
   Future<Either<Failure, String>> addAddress({
     String? label,

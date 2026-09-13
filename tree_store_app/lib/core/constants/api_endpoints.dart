@@ -16,6 +16,7 @@ class ApiEndpoints {
 
   // Tree
   static const String trees = '/api/trees';
+  static const String featuredTrees = '/api/trees/featured';
   static const String treeDetail = '/api/trees/{id}';
   static const String categories = '/api/categories';
 
@@ -29,5 +30,6 @@ class ApiEndpoints {
 
   // Profile
   static const String profile = '/api/profile';
+  static const String avatar = '/api/profile/avatar';
   static const String addresses = '/api/profile/addresses';
 }

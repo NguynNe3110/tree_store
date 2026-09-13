@@ -10,7 +10,8 @@ class OrderRemoteDataSource {
 
   Future<List<OrderResponseDto>> getOrders() async {
     final res = await _dio.get(ApiEndpoints.orders);
-    final raw = (res.data['data'] as List?) ?? const [];
+    // Backend returns list at root
+    final raw = res.data is List ? (res.data as List) : const [];
     return raw
         .whereType<Map<String, dynamic>>()
         .map(OrderResponseDto.fromJson)
@@ -21,7 +22,12 @@ class OrderRemoteDataSource {
     final res = await _dio.get(
       ApiEndpoints.orderDetail.replaceAll('{id}', id),
     );
-    return OrderResponseDto.fromJson(res.data['data'] as Map<String, dynamic>);
+    // Backend returns object at root
+    final data = res.data;
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Invalid order detail response');
+    }
+    return OrderResponseDto.fromJson(data);
   }
 
   Future<OrderResponseDto> createOrder({
@@ -52,6 +58,11 @@ class OrderRemoteDataSource {
         discountAmount: discountAmount,
       ).toJson(),
     );
-    return OrderResponseDto.fromJson(res.data['data'] as Map<String, dynamic>);
+    // Backend returns object at root
+    final data = res.data;
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Invalid order create response');
+    }
+    return OrderResponseDto.fromJson(data);
   }
 }
