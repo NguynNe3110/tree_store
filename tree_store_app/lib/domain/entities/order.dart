@@ -21,7 +21,7 @@ extension OrderStatusX on OrderStatus {
   }
 }
 
-enum PaymentMethod { cod, bankTransfer, eWallet }
+enum PaymentMethod { cod, bankTransfer, eWallet, payos }
 
 extension PaymentMethodX on PaymentMethod {
   String get apiName {
@@ -32,6 +32,8 @@ extension PaymentMethodX on PaymentMethod {
         return 'bank_transfer';
       case PaymentMethod.eWallet:
         return 'e_wallet';
+      case PaymentMethod.payos:
+        return 'payos';
     }
   }
 
@@ -41,6 +43,8 @@ extension PaymentMethodX on PaymentMethod {
         return PaymentMethod.bankTransfer;
       case 'e_wallet':
         return PaymentMethod.eWallet;
+      case 'payos':
+        return PaymentMethod.payos;
       default:
         return PaymentMethod.cod;
     }

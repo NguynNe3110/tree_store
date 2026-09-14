@@ -131,6 +131,23 @@ object OrderItems : Table("order_items") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object Payments : Table("payments") {
+    val id = uuid("id")
+    val orderId = uuid("order_id")
+    val provider = text("provider")
+    val orderCode = long("order_code").uniqueIndex()
+    val providerPaymentId = text("provider_payment_id").nullable()
+    val transactionNo = text("transaction_no").nullable()
+    val amount = long("amount")
+    val status = text("status").default("pending")
+    val checkoutUrl = text("checkout_url").nullable()
+    val rawWebhook = text("raw_webhook").nullable()
+    val paidAt = timestampWithTimeZone("paid_at").nullable()
+    val createdAt = timestampWithTimeZone("created_at")
+    val updatedAt = timestampWithTimeZone("updated_at")
+    override val primaryKey = PrimaryKey(id)
+}
+
 object RefreshTokens : Table("refresh_tokens") {
     val id = uuid("id")
     val userId = uuid("user_id")

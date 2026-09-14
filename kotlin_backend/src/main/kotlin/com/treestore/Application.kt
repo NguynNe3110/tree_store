@@ -37,6 +37,16 @@ fun Application.module() {
     val adminUser = environment.config.property("admin.username").getString()
     val adminPass = environment.config.property("admin.password").getString()
 
+    val paymentProviders: Map<String, PaymentProvider> = mapOf(
+        "payos" to PayOsProvider(
+            baseUrl = environment.config.property("payment.payos.baseUrl").getString(),
+            clientId = environment.config.property("payment.payos.clientId").getString(),
+            checksumSecret = environment.config.property("payment.payos.checksumSecret").getString(),
+            secretKey = environment.config.property("payment.payos.secretKey").getString()
+        )
+    )
+    val paymentPublicBaseUrl = environment.config.property("payment.publicBaseUrl").getString()
+
     install(ContentNegotiation) {
         json(Json {
             prettyPrint = true
@@ -104,6 +114,7 @@ fun Application.module() {
         treeRoutes()
         cartRoutes()
         orderRoutes()
+        paymentRoutes(paymentProviders, paymentPublicBaseUrl)
         profileRoutes()
         // ponytail: serve SDUI dashboard HTML for MVP
         static("/") {

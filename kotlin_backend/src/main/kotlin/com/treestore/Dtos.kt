@@ -193,3 +193,13 @@ data class UiBlockUpsertRequest(
 
 @Serializable
 data class ApiError(val message: String)
+
+@Serializable
+data class CreatePaymentRequestDto(val provider: String = "payos")
+
+@Serializable
+data class CreatePaymentResponseDto(
+    val paymentId: String,
+    val orderCode: Long,
+    val checkoutUrl: String
+)

@@ -8,6 +8,9 @@ class CreateOrderParams extends Equatable {
   final String customerName;
   final String phoneNumber;
   final String addressLine;
+  final String city;
+  final String district;
+  final String? ward;
   final String? note;
   final List<OrderItemInput> items;
   final String paymentMethod;
@@ -17,6 +20,9 @@ class CreateOrderParams extends Equatable {
     required this.customerName,
     required this.phoneNumber,
     required this.addressLine,
+    this.city = '',
+    this.district = '',
+    this.ward,
     this.note,
     required this.items,
     this.paymentMethod = 'cod',
@@ -29,6 +35,9 @@ class CreateOrderParams extends Equatable {
         customerName,
         phoneNumber,
         addressLine,
+        city,
+        district,
+        ward,
         note,
         items,
         paymentMethod,

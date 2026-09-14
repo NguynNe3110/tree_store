@@ -27,6 +27,7 @@ class ApiEndpoints {
   // Order
   static const String orders = '/api/orders';
   static const String orderDetail = '/api/orders/{id}';
+  static const String orderPayment = '/api/orders/{id}/payment';
 
   // Profile
   static const String profile = '/api/profile';

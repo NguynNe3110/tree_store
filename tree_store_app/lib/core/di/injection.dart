@@ -4,18 +4,21 @@ import '../../data/remote/datasources/auth_remote_datasource.dart';
 import '../../data/remote/datasources/cart_remote_datasource.dart';
 import '../../data/remote/datasources/home_remote_datasource.dart';
 import '../../data/remote/datasources/order_remote_datasource.dart';
+import '../../data/remote/datasources/payment_remote_datasource.dart';
 import '../../data/remote/datasources/profile_remote_datasource.dart';
 import '../../data/remote/datasources/tree_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/cart_repository_impl.dart';
 import '../../data/repositories/home_repository_impl.dart';
 import '../../data/repositories/order_repository_impl.dart';
+import '../../data/repositories/payment_repository_impl.dart';
 import '../../data/repositories/profile_repository_impl.dart';
 import '../../data/repositories/tree_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/cart_repository.dart';
 import '../../domain/repositories/home_repository.dart';
 import '../../domain/repositories/order_repository.dart';
+import '../../domain/repositories/payment_repository.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../../domain/repositories/tree_repository.dart';
 import '../../domain/usecases/auth/login_usecase.dart';
@@ -28,7 +31,9 @@ import '../../domain/usecases/cart/add_to_cart_usecase.dart';
 import '../../domain/usecases/cart/get_cart_usecase.dart';
 import '../../domain/usecases/cart/remove_from_cart_usecase.dart';
 import '../../domain/usecases/order/create_order_usecase.dart';
+import '../../domain/usecases/order/get_order_detail_usecase.dart';
 import '../../domain/usecases/order/get_orders_usecase.dart';
+import '../../domain/usecases/payment/create_payment_usecase.dart';
 import '../../domain/usecases/profile/add_address_usecase.dart';
 import '../../domain/usecases/profile/get_addresses_usecase.dart';
 import '../../domain/usecases/profile/get_profile_usecase.dart';
@@ -66,6 +71,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => TreeRemoteDataSource(sl()));
   sl.registerLazySingleton(() => CartRemoteDataSource(sl()));
   sl.registerLazySingleton(() => OrderRemoteDataSource(sl()));
+  sl.registerLazySingleton(() => PaymentRemoteDataSource(sl()));
   sl.registerLazySingleton(() => ProfileRemoteDataSource(sl()));
   sl.registerLazySingleton(() => HomeRemoteDataSource(sl()));
 
@@ -74,6 +80,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<TreeRepository>(() => TreeRepositoryImpl(sl()));
   sl.registerLazySingleton<CartRepository>(() => CartRepositoryImpl(sl()));
   sl.registerLazySingleton<OrderRepository>(() => OrderRepositoryImpl(sl()));
+  sl.registerLazySingleton<PaymentRepository>(() => PaymentRepositoryImpl(sl()));
   sl.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl(sl()));
   sl.registerLazySingleton<HomeRepository>(() => HomeRepositoryImpl(sl()));
 
@@ -89,6 +96,8 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => RemoveFromCartUsecase(sl()));
   sl.registerFactory(() => CreateOrderUsecase(sl()));
   sl.registerFactory(() => GetOrdersUsecase(sl()));
+  sl.registerFactory(() => GetOrderDetailUsecase(sl()));
+  sl.registerFactory(() => CreatePaymentUsecase(sl()));
   sl.registerFactory(() => GetProfileUsecase(sl()));
   sl.registerFactory(() => UpdateProfileUsecase(sl()));
   sl.registerFactory(() => UploadAvatarUsecase(sl()));
@@ -109,7 +118,12 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => HomeBloc(getHomeBlocks: sl()));
   sl.registerFactory(() => OtpBloc(sendOtp: sl(), verifyOtp: sl()));
   sl.registerFactory(() => CartBloc(getCart: sl(), addToCart: sl(), removeFromCart: sl()));
-  sl.registerFactory(() => OrderBloc(getOrders: sl(), createOrder: sl()));
+  sl.registerFactory(() => OrderBloc(
+        getOrders: sl(),
+        getOrderDetail: sl(),
+        createOrder: sl(),
+        createPayment: sl(),
+      ));
   sl.registerFactory(() => ProfileBloc(getProfile: sl(), updateProfile: sl(), uploadAvatar: sl()));
   sl.registerFactory(() => TreeBloc(getTreeDetail: sl()));
   sl.registerFactory(() => SearchBloc(getTrees: sl(), getFeatured: sl()));

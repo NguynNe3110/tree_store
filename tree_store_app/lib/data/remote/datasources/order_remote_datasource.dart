@@ -34,6 +34,9 @@ class OrderRemoteDataSource {
     required String customerName,
     required String phoneNumber,
     required String addressLine,
+    String city = '',
+    String district = '',
+    String? ward,
     String? note,
     required List<OrderItemInput> items,
     String paymentMethod = 'cod',
@@ -46,6 +49,9 @@ class OrderRemoteDataSource {
         customerName: customerName,
         phoneNumber: phoneNumber,
         addressLine: addressLine,
+        city: city,
+        district: district,
+        ward: ward,
         note: note,
         items: items
             .map((e) => OrderItemRequestDto(

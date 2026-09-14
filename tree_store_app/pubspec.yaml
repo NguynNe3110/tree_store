@@ -55,6 +55,7 @@ dependencies:
   # Env
   flutter_dotenv: ^5.1.0
   image_picker: ^1.2.3
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

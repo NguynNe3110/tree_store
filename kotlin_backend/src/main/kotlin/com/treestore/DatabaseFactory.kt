@@ -31,6 +31,7 @@ object DatabaseFactory {
                 Addresses,
                 Orders,
                 OrderItems,
+                Payments,
                 RefreshTokens,
                 OtpCodes,
                 UiBlocks

@@ -383,6 +383,154 @@ fun Route.cartRoutes() {
     }
 }
 
+fun Route.paymentRoutes(providers: Map<String, PaymentProvider>, publicBaseUrl: String) {
+    authenticate("auth-jwt") {
+        post("/api/orders/{id}/payment", {
+            summary = "Create payment for order"
+            request {
+                pathParameter<String>("id")
+                body<CreatePaymentRequestDto>()
+            }
+            response {
+                code(HttpStatusCode.Created) { description = "Payment created, returns checkoutUrl" }
+                code(HttpStatusCode.NotFound) { description = "Order not found or not owned" }
+            }
+        }) {
+            val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
+            val orderId = UUID.fromString(call.parameters["id"] ?: return@post call.respond(HttpStatusCode.NotFound, ApiError("Missing order id")))
+            val req = call.receive<CreatePaymentRequestDto>()
+            val provider = providers[req.provider]
+                ?: return@post call.respond(HttpStatusCode.BadRequest, ApiError("Unsupported provider: ${req.provider}"))
+            val order = transaction {
+                Orders.selectAll().where { (Orders.id eq orderId) and (Orders.userId eq userId) }.singleOrNull()
+            } ?: return@post call.respond(HttpStatusCode.NotFound, ApiError("Order not found"))
+            if (order[Orders.paymentStatus] == "paid")
+                return@post call.respond(HttpStatusCode.BadRequest, ApiError("Order already paid"))
+            // existing pending payment for same provider -> reuse checkout URL (idempotent)
+            val existing = transaction {
+                Payments.selectAll().where {
+                    (Payments.orderId eq orderId) and (Payments.provider eq provider.code) and (Payments.status eq "pending")
+                }.singleOrNull()?.let { row ->
+                    row[Payments.id].toString() to (row[Payments.orderCode] to row[Payments.checkoutUrl])
+                }
+            }
+            existing?.second?.second?.let { url ->
+                return@post call.respond(CreatePaymentResponseDto(existing.first, existing.second.first, url))
+            }
+            val amount = (order[Orders.subtotalPrice] + order[Orders.shippingFee] - order[Orders.discountAmount])
+                .setScale(0, java.math.RoundingMode.HALF_UP).longValueExact()
+            if (amount <= 0)
+                return@post call.respond(HttpStatusCode.BadRequest, ApiError("Order amount must be positive"))
+            val orderCode = System.currentTimeMillis()
+            val now = OffsetDateTime.now()
+            try {
+                val created = provider.createPayment(
+                    orderCode = orderCode,
+                    amount = amount,
+                    description = "TreeStore ${orderId}".take(25),
+                    returnUrl = "$publicBaseUrl/api/payments/done",
+                    cancelUrl = "$publicBaseUrl/api/payments/cancel"
+                )
+                val paymentId = UUID.randomUUID()
+                transaction {
+                    Payments.insert {
+                        it[id] = paymentId
+                        it[Payments.orderId] = orderId
+                        it[Payments.provider] = provider.code
+                        it[Payments.orderCode] = created.orderCode
+                        it[providerPaymentId] = created.providerPaymentId
+                        it[Payments.amount] = amount
+                        it[status] = "pending"
+                        it[checkoutUrl] = created.checkoutUrl
+                        it[createdAt] = now
+                        it[updatedAt] = now
+                    }
+                    Orders.update({ Orders.id eq orderId }) {
+                        it[paymentMethod] = provider.code
+                        it[updatedAt] = now
+                    }
+                }
+                call.respond(HttpStatusCode.Created, CreatePaymentResponseDto(paymentId.toString(), created.orderCode, created.checkoutUrl))
+            } catch (e: Exception) {
+                call.application.log.error("Payment create failed", e)
+                call.respond(HttpStatusCode.BadGateway, ApiError("Gateway error: ${e.localizedMessage}"))
+            }
+        }
+    }
+
+    route("/api/payments") {
+        // public by design: gateway calls this. Authenticity comes from x-signature HMAC, not JWT.
+        post("/{provider}/webhook", {
+            summary = "Gateway webhook (verified by signature)"
+            request {
+                pathParameter<String>("provider")
+                body<String>()
+            }
+            response {
+                code(HttpStatusCode.OK) { description = "ACK expected by gateway" }
+                code(HttpStatusCode.BadRequest) { description = "Invalid signature" }
+            }
+        }) {
+            val provider = providers[call.parameters["provider"]]
+                ?: return@post call.respond(HttpStatusCode.NotFound, ApiError("Unknown provider"))
+            val body = call.receiveText()
+            val result = provider.verifyWebhook(body, call.request.headers["x-signature"])
+            if (!result.verified)
+                return@post call.respond(HttpStatusCode.BadRequest, ApiError("Invalid signature"))
+            val payment = result.orderCode?.let { code ->
+                transaction { Payments.selectAll().where { Payments.orderCode eq code }.singleOrNull() }
+            }
+            if (payment == null) {
+                call.application.log.warn("Payment webhook for unknown orderCode ${result.orderCode}")
+                return@post call.respondText(provider.webhookAckBody, ContentType.Application.Json)
+            }
+            val paymentId = payment[Payments.id]
+            val now = OffsetDateTime.now()
+            transaction {
+                if (payment[Payments.status] == "paid") {
+                    // duplicate webhook: idempotent ACK, no state change
+                } else if (result.success) {
+                    if (result.amount > 0 && result.amount != payment[Payments.amount]) {
+                        call.application.log.warn("Webhook amount mismatch ${result.amount} != ${payment[Payments.amount]} for orderCode ${result.orderCode}")
+                    } else {
+                        Payments.update({ Payments.id eq paymentId }) { up ->
+                            up[status] = "paid"
+                            up[transactionNo] = result.transactionNo
+                            result.providerPaymentId?.let { pid -> up[Payments.providerPaymentId] = pid }
+                            up[rawWebhook] = result.raw
+                            up[paidAt] = now
+                            up[updatedAt] = now
+                        }
+                        Orders.update({ Orders.id eq payment[Payments.orderId] }) {
+                            it[paymentStatus] = "paid"
+                            it[updatedAt] = now
+                        }
+                    }
+                } else {
+                    Payments.update({ Payments.id eq paymentId }) {
+                        it[status] = "failed"
+                        it[rawWebhook] = result.raw
+                        it[updatedAt] = now
+                    }
+                }
+            }
+            call.respondText(provider.webhookAckBody, ContentType.Application.Json)
+        }
+        get("/done", { summary = "Landing page after successful gateway checkout (app polls order status)" }) {
+            call.respondText(
+                "<html><body style='font-family:sans-serif;text-align:center;padding-top:48px'><h2>✅ Thanh toán thành công</h2><p>Bạn có thể quay lại ứng dụng.</p></body></html>",
+                ContentType.Text.Html
+            )
+        }
+        get("/cancel", { summary = "Landing page when user cancels gateway checkout" }) {
+            call.respondText(
+                "<html><body style='font-family:sans-serif;text-align:center;padding-top:48px'><h2>❌ Đã hủy thanh toán</h2><p>Quay lại ứng dụng để thử lại.</p></body></html>",
+                ContentType.Text.Html
+            )
+        }
+    }
+}
+
 fun Route.orderRoutes() {
     authenticate("auth-jwt") {
         route("/api/orders") {

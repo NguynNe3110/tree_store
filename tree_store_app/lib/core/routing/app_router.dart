@@ -13,6 +13,7 @@ import '../../presentation/screens/search/search_screen.dart';
 import '../../presentation/screens/product/product_detail_screen.dart';
 import '../../presentation/screens/cart/cart_screen.dart';
 import '../../presentation/screens/checkout/checkout_screen.dart';
+import '../../presentation/screens/checkout/pay_webview_screen.dart';
 import '../../presentation/screens/checkout/order_success_screen.dart';
 import '../../presentation/screens/order/order_history_screen.dart';
 import '../../presentation/screens/order/order_detail_screen.dart';
@@ -68,6 +69,13 @@ GoRouter createRouter(TokenStorage tokenStorage) {
         return CheckoutScreen(
           singleItem: extra?['singleItem'] as Product?,
           quantity: extra?['quantity'] as int? ?? 1,
+        );
+      }),
+      GoRoute(path: '/pay-webview', builder: (_, s) {
+        final extra = s.extra as Map<String, dynamic>?;
+        return PayWebviewScreen(
+          orderId: extra?['orderId'] as String? ?? '',
+          url: extra?['url'] as String? ?? '',
         );
       }),
       GoRoute(path: '/order-success', builder: (_, s) => OrderSuccessScreen(orderId: s.uri.queryParameters['id'] ?? '')),

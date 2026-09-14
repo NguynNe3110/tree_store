@@ -103,21 +103,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       orderItems = cartItems.map((c) => OrderItemInput(treeId: c.treeId, quantity: c.quantity)).toList();
     }
 
-    setState(() => _isProcessingPayment = true);
-    
-    // Simulate real payment delay
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
+    setState(() => _isProcessingPayment = _paymentMethod != 'cod');
 
     context.read<OrderBloc>().add(OrderCreate(CreateOrderParams(
           customerName: addr.receiverName,
           phoneNumber: addr.phoneNumber,
-          addressLine: addr.fullAddress,
+          addressLine: addr.addressLine,
+          city: addr.city,
+          district: addr.district,
+          ward: addr.ward,
           note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
           items: orderItems,
           paymentMethod: _paymentMethod,
         )));
+  }
+
+  Future<void> _startGatewayPayment(String orderId) async {
+    context.read<OrderBloc>().add(OrderStartPayment(orderId));
+  }
+
+  Future<void> _pollAfterWebview(String orderId) async {
+    if (!mounted) return;
+    context.read<OrderBloc>().add(OrderWatchPayment(orderId));
   }
 
   @override
@@ -125,9 +132,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Thanh toán')),
       body: BlocConsumer<OrderBloc, OrderState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is OrderCreated) {
-            context.go('/order-success?id=${state.order.id}');
+            if (_paymentMethod == 'cod') {
+              context.go('/order-success?id=${state.order.id}');
+            } else {
+              _startGatewayPayment(state.order.id);
+            }
+          } else if (state is PaymentReady) {
+            await context.push('/pay-webview', extra: {
+              'orderId': state.orderId,
+              'url': state.checkoutUrl,
+            });
+            _isProcessingPayment = true;
+            _pollAfterWebview(state.orderId);
+          } else if (state is PaymentPaid) {
+            if (mounted) context.go('/order-success?id=${state.order.id}');
+          } else if (state is PaymentTimeout) {
+            if (!mounted) return;
+            setState(() => _isProcessingPayment = false);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Chưa nhận được xác nhận thanh toán. Đơn vẫn giữ nguyên, kiểm tra lại trong mục Đơn hàng.'),
+              backgroundColor: AppColors.terra,
+            ));
+            context.go('/orders');
           } else if (state is OrderError) {
             setState(() => _isProcessingPayment = false);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.terra));
@@ -312,7 +340,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const Text('💳 Phương thức thanh toán', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           _payOption('cod', 'Thanh toán khi nhận hàng (COD)', Icons.payments_outlined),
-          _payOption('bank', 'Chuyển khoản ngân hàng', Icons.account_balance_outlined, subtitle: 'VCB · TCB · MB'),
+          _payOption('payos', 'QR ngân hàng / ví (PayOS)', Icons.qr_code_2, subtitle: 'VietQR · MoMo · ZaloPay'),
         ],
       ),
     );

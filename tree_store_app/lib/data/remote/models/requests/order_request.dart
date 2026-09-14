@@ -10,6 +10,9 @@ class CreateOrderRequestDto {
   final String customerName;
   final String phoneNumber;
   final String addressLine;
+  final String city;
+  final String district;
+  final String? ward;
   final String? note;
   final List<OrderItemRequestDto> items;
   final String paymentMethod;
@@ -19,6 +22,9 @@ class CreateOrderRequestDto {
     required this.customerName,
     required this.phoneNumber,
     required this.addressLine,
+    this.city = '',
+    this.district = '',
+    this.ward,
     this.note,
     required this.items,
     this.paymentMethod = 'cod',
@@ -30,6 +36,9 @@ class CreateOrderRequestDto {
         'customerName': customerName,
         'phoneNumber': phoneNumber,
         'addressLine': addressLine,
+        'city': city,
+        'district': district,
+        if (ward != null) 'ward': ward,
         if (note != null) 'note': note,
         'items': items.map((e) => e.toJson()).toList(),
         'paymentMethod': paymentMethod,
