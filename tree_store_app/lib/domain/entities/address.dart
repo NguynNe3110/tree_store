@@ -31,7 +31,9 @@ class Address extends Equatable {
     this.updatedAt,
   });
 
-  String get fullAddress => '$addressLine, $ward, $district, $city';
+  String get fullAddress => [addressLine, ward, district, city]
+      .where((p) => p != null && p.isNotEmpty)
+      .join(', ');
 
   @override
   List<Object?> get props => [

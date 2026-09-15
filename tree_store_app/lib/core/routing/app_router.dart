@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../presentation/screens/splash_screen.dart';
 import '../../presentation/screens/auth/forgot_password_screen.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/otp_screen.dart';
@@ -33,19 +34,23 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 GoRouter createRouter(TokenStorage tokenStorage) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: '/splash',
     redirect: (context, state) async {
       final token = await tokenStorage.getAccessToken();
       final loggedIn = token != null && token.isNotEmpty;
       isAuthenticated = loggedIn;
-      final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register' || state.matchedLocation == '/forgot-password' || state.matchedLocation == '/otp';
+      final loc = state.matchedLocation;
+      if (loc == '/splash') return null;
+      final isAuthRoute = loc == '/login' || loc == '/register' || loc == '/forgot-password' || loc == '/otp';
       if (!loggedIn && !isAuthRoute) return '/login';
       if (loggedIn && isAuthRoute) return '/home';
       return null;
     },
     routes: [
+      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset-password', builder: (_, s) => ResetPasswordScreen(email: s.uri.queryParameters['email'] ?? '')),
       GoRoute(path: '/otp', builder: (_, s) => OtpScreen(email: s.uri.queryParameters['email'] ?? '', purpose: s.uri.queryParameters['purpose'] ?? 'register')),
       ShellRoute(
@@ -78,7 +83,7 @@ GoRouter createRouter(TokenStorage tokenStorage) {
           url: extra?['url'] as String? ?? '',
         );
       }),
-      GoRoute(path: '/order-success', builder: (_, s) => OrderSuccessScreen(orderId: s.uri.queryParameters['id'] ?? '')),
+      GoRoute(path: '/order-success', builder: (_, s) => OrderSuccessScreen(orderId: s.uri.queryParameters['id'] ?? '', paid: s.uri.queryParameters['paid'] == '1')),
       GoRoute(path: '/orders', builder: (_, __) => const OrderHistoryScreen()),
       GoRoute(path: '/order/:id', builder: (_, s) => OrderDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),

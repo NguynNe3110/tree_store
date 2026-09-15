@@ -158,9 +158,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         labelText: label,
         filled: true,
         fillColor: AppColors.green50,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        border: _border(AppColors.line),
+        enabledBorder: _border(AppColors.line2),
+        focusedBorder: _border(AppColors.green700, width: 1.5),
+        errorBorder: _border(AppColors.terra),
+        focusedErrorBorder: _border(AppColors.terra, width: 1.5),
       ),
     ),
+  );
+
+  OutlineInputBorder _border(Color color, {double width = 1}) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(14),
+    borderSide: BorderSide(color: color, width: width),
   );
 
   Widget _readOnlyField(String label, TextEditingController ctrl) => Padding(
@@ -172,7 +181,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         labelText: label,
         filled: true,
         fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        border: _border(AppColors.line),
+        enabledBorder: _border(AppColors.line2),
       ),
     ),
   );

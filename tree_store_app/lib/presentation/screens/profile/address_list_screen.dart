@@ -60,8 +60,8 @@ class _AddressListScreenState extends State<AddressListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final added = await context.push<bool>('/add-address');
-          if (added == true && mounted) {
+          await context.push('/add-address');
+          if (mounted) {
             setState(() => _future = _load());
           }
         },

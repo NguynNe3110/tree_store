@@ -542,7 +542,14 @@ fun Route.orderRoutes() {
             }) {
                 val userId = UUID.fromString(call.principal<JWTPrincipal>()!!.payload.getClaim("userId").asString())
                 val orders = transaction {
-                    Orders.selectAll().where { Orders.userId eq userId }.orderBy(Orders.createdAt to SortOrder.DESC).map { row ->
+                    val rows = Orders.selectAll().where { Orders.userId eq userId }.orderBy(Orders.createdAt to SortOrder.DESC).toList()
+                    val orderIds = rows.map { it[Orders.id] }
+                    val itemsByOrder = if (orderIds.isEmpty()) emptyMap() else
+                        OrderItems.selectAll().where { OrderItems.orderId inList orderIds }
+                            .groupBy({ it[OrderItems.orderId] }) { row ->
+                                OrderItemDto(row[OrderItems.id].toString(), row[OrderItems.treeId]?.toString(), row[OrderItems.treeNameSnapshot], row[OrderItems.unitPriceSnapshot].toDouble(), row[OrderItems.quantity], row[OrderItems.imageUrlSnapshot], row[OrderItems.lineTotal].toDouble())
+                            }
+                    rows.map { row ->
                         OrderDto(
                             id = row[Orders.id].toString(), userId = row[Orders.userId]?.toString(),
                             status = row[Orders.status], paymentMethod = row[Orders.paymentMethod],
@@ -550,7 +557,8 @@ fun Route.orderRoutes() {
                             shippingFee = row[Orders.shippingFee].toDouble(), discountAmount = row[Orders.discountAmount].toDouble(),
                             totalPrice = row[Orders.totalPrice].toDouble(), receiverName = row[Orders.receiverName],
                             phoneNumber = row[Orders.phoneNumber], addressLine = row[Orders.addressLine],
-                            city = row[Orders.city], district = row[Orders.district], ward = row[Orders.ward], note = row[Orders.note]
+                            city = row[Orders.city], district = row[Orders.district], ward = row[Orders.ward], note = row[Orders.note],
+                            items = itemsByOrder[row[Orders.id]].orEmpty()
                         )
                     }
                 }
@@ -615,6 +623,7 @@ fun Route.orderRoutes() {
                         it[subtotalPrice] = subtotal
                         it[shippingFee] = java.math.BigDecimal(req.shippingFee)
                         it[discountAmount] = java.math.BigDecimal(req.discountAmount)
+                        it[totalPrice] = subtotal + java.math.BigDecimal(req.shippingFee) - java.math.BigDecimal(req.discountAmount)
                         it[receiverName] = req.customerName
                         it[phoneNumber] = req.phoneNumber
                         it[addressLine] = req.addressLine

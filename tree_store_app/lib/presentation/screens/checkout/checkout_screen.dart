@@ -122,11 +122,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     context.read<OrderBloc>().add(OrderStartPayment(orderId));
   }
 
-  Future<void> _pollAfterWebview(String orderId) async {
-    if (!mounted) return;
-    context.read<OrderBloc>().add(OrderWatchPayment(orderId));
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,12 +139,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               'orderId': state.orderId,
               'url': state.checkoutUrl,
             });
-            _isProcessingPayment = true;
-            _pollAfterWebview(state.orderId);
+            if (!context.mounted) return;
+            setState(() => _isProcessingPayment = true);
+            context.read<OrderBloc>().add(OrderWatchPayment(state.orderId));
           } else if (state is PaymentPaid) {
-            if (mounted) context.go('/order-success?id=${state.order.id}');
+            if (!context.mounted) return;
+            context.go('/order-success?id=${state.order.id}&paid=1');
           } else if (state is PaymentTimeout) {
-            if (!mounted) return;
+            if (!context.mounted) return;
             setState(() => _isProcessingPayment = false);
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Chưa nhận được xác nhận thanh toán. Đơn vẫn giữ nguyên, kiểm tra lại trong mục Đơn hàng.'),
@@ -157,6 +154,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ));
             context.go('/orders');
           } else if (state is OrderError) {
+            if (!context.mounted) return;
             setState(() => _isProcessingPayment = false);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: AppColors.terra));
           }

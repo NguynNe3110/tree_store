@@ -5,7 +5,8 @@ import '../../widgets/primary_button.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   final String orderId;
-  const OrderSuccessScreen({super.key, this.orderId = ''});
+  final bool paid;
+  const OrderSuccessScreen({super.key, this.orderId = '', this.paid = false});
 
   @override
   Widget build(BuildContext context) {
@@ -44,15 +45,15 @@ class OrderSuccessScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: AppColors.green50, borderRadius: BorderRadius.circular(14)),
                 child: Column(
-                  children: const [
+                  children: [
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('Thanh toán', style: TextStyle(fontSize: 13, color: AppColors.muted)),
-                      Text('COD', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Text('Thanh toán', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                      Text(paid ? 'Đã thanh toán' : 'COD', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: paid ? AppColors.green700 : AppColors.ink)),
                     ]),
-                    Divider(height: 20),
+                    const Divider(height: 20),
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('Trạng thái', style: TextStyle(fontSize: 13, color: AppColors.muted)),
-                      Text('Đang xử lý', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Text('Trạng thái', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                      Text(paid ? 'Đã xác nhận' : 'Đang xử lý', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                     ]),
                   ],
                 ),

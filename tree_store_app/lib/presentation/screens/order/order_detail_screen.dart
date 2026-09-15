@@ -37,8 +37,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = GoRouter.of(context).canPop();
     return Scaffold(
-      appBar: AppBar(title: Text('#${widget.id.substring(0, 8).toUpperCase()}')),
+      appBar: AppBar(
+        leading: canPop
+            ? IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())
+            : IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/orders')),
+        title: Text('#${widget.id.substring(0, 8).toUpperCase()}'),
+      ),
       body: BlocBuilder<OrderBloc, OrderState>(
         builder: (context, state) {
           if (state is OrderLoading) {
@@ -67,7 +73,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         decoration: const BoxDecoration(color: AppColors.paper, border: Border(top: BorderSide(color: AppColors.line2))),
         child: Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: () {}, style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.line2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: const Text('Liên hệ shop', style: TextStyle(color: AppColors.ink)))),
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.line2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Liên hệ shop', style: TextStyle(color: AppColors.ink)),
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
             const Expanded(child: PrimaryButton(label: 'Theo dõi')),
           ],
@@ -201,10 +219,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _sumRow('Phí giao hàng', _formatPrice(o.shippingFee)),
           _sumRow('Giảm giá', '-${_formatPrice(o.discountAmount)}', isTerra: true),
           const Divider(height: 24, color: AppColors.line2),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Tổng cộng · COD', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)), Text(_formatPrice(o.totalPrice), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.green700))]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Tổng cộng · ${_paymentLabel(o)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)), Text(_formatPrice(o.totalPrice), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.green700))]),
         ],
       ),
     );
+  }
+
+  String _paymentLabel(Order o) {
+    switch (o.paymentMethod) {
+      case PaymentMethod.payos:
+        return o.paymentStatus == PaymentStatus.paid ? 'Đã thanh toán' : 'PayOS';
+      case PaymentMethod.bankTransfer:
+        return 'Chuyển khoản';
+      case PaymentMethod.eWallet:
+        return 'Ví điện tử';
+      case PaymentMethod.cod:
+        return 'COD';
+    }
   }
 
   Widget _sumRow(String l, String v, {bool isTerra = false}) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(l, style: const TextStyle(fontSize: 13, color: AppColors.muted)), Text(v, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isTerra ? AppColors.terra : AppColors.ink))]));

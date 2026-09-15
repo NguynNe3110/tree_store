@@ -38,7 +38,7 @@ class OrderResponseDto {
     return OrderResponseDto(
       id: json['id']?.toString() ?? '',
       userId: json['userId'] as String?,
-      customerName: json['customerName']?.toString() ?? '',
+      customerName: json['receiverName']?.toString() ?? json['customerName']?.toString() ?? '',
       phoneNumber: json['phoneNumber']?.toString() ?? '',
       addressLine: json['addressLine'] as String?,
       note: json['note'] as String?,
