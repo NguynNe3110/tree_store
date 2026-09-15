@@ -1,2 +1,42 @@
-src/main/resources/application.conf
+# Build output
+build/
+bin/
+out/
+
+# Gradle
+.gradle/
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.continue/
+
+# Secrets / local config (giữ .example trong repo)
+application.conf
+application-local.properties
+local.properties
+*.env
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+coverage/
+
 /afolder/
+.kilo

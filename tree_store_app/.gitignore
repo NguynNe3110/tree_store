@@ -12,26 +12,44 @@
 .swiftpm/
 migrate_working_dir/
 
+# Secrets / env (dotenv file vẫn cần asset, nhưng nếu có key thì không commit)
+.env
+.env.*
+!.env.example
+
 # IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+devtools_options.yaml
 .pub-cache/
 .pub/
 /build/
 /coverage/
+
+# Android
+android/.gradle/
+android/.kotlin/
+android/key.properties
+*.jks
+*.keystore
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS
+**/podspec.tmp
+**/xcuserdata/
+**/Pods/
 
 # Symbolication related
 app.*.symbols
@@ -39,17 +57,10 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
 # gen file
 *.freezed.dart
 *.g.dart
 *.config.dart
 *.gr.dart
-
+*.kilo
 /afolder/
-
-*/application.conf
