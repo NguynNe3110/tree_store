@@ -25,11 +25,18 @@ class _AddressListScreenState extends State<AddressListScreen> {
     return result.fold((f) => throw Exception(f.message), (list) => list);
   }
 
+  Future<void> _reload() async {
+    final f = _load();
+    if (mounted) setState(() => _future = f);
+    await f;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Sổ địa chỉ')),
       body: FutureBuilder<List<Address>>(
+        key: ValueKey(_future),
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -61,9 +68,7 @@ class _AddressListScreenState extends State<AddressListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await context.push('/add-address');
-          if (mounted) {
-            setState(() => _future = _load());
-          }
+          await _reload();
         },
         backgroundColor: AppColors.green700,
         child: const Icon(Icons.add, color: Colors.white, size: 26),
@@ -73,7 +78,7 @@ class _AddressListScreenState extends State<AddressListScreen> {
 
   Widget _card(Address a) {
     return GestureDetector(
-      onTap: () => context.pop(a), // Return selected address to Checkout
+      onTap: () { if (context.canPop()) context.pop(a); }, // Return selected address to Checkout only if caller expects it
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),

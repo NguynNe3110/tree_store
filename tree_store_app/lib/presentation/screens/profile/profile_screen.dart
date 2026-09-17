@@ -140,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           children: [
                             _menuItem(Icons.person_outline, 'Thông tin cá nhân', 'Tên, email, số điện thoại', () => context.push('/edit-profile')),
-                            _menuItem(Icons.map_outlined, 'Sổ địa chỉ', '3 địa chỉ đã lưu', () => context.push('/addresses')),
+                            _menuItem(Icons.map_outlined, 'Sổ địa chỉ', null, () => context.push('/addresses')),
                             _menuItem(Icons.shopping_bag_outlined, 'Đơn hàng của tôi', null, () => context.push('/orders')),
                             _menuItem(Icons.favorite_outline, 'Cây yêu thích', null, null),
                             _menuItem(Icons.card_giftcard_outlined, 'Voucher của tôi', '2 voucher', null),

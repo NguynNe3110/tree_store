@@ -544,7 +544,7 @@ fun Route.orderRoutes() {
                 val orders = transaction {
                     val rows = Orders.selectAll().where { Orders.userId eq userId }.orderBy(Orders.createdAt to SortOrder.DESC).toList()
                     val orderIds = rows.map { it[Orders.id] }
-                    val itemsByOrder = if (orderIds.isEmpty) emptyMap() else
+                    val itemsByOrder = if (orderIds.isEmpty()) emptyMap() else
                         OrderItems.selectAll().where { OrderItems.orderId inList orderIds }
                             .groupBy({ it[OrderItems.orderId] }) { row ->
                                 OrderItemDto(row[OrderItems.id].toString(), row[OrderItems.treeId]?.toString(), row[OrderItems.treeNameSnapshot], row[OrderItems.unitPriceSnapshot].toDouble(), row[OrderItems.quantity], row[OrderItems.imageUrlSnapshot], row[OrderItems.lineTotal].toDouble())

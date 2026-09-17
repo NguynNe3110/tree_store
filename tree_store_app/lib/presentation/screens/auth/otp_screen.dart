@@ -58,8 +58,8 @@ class _OtpScreenState extends State<OtpScreen> {
           if (state is OtpVerified) {
             if (widget.purpose == 'register') {
               context.go('/home');
-            } else if (widget.purpose == 'reset') {
-              context.push('/reset-password?email=${widget.email}');
+            } else if (widget.purpose == 'reset' || widget.purpose == 'forgot_password') {
+              context.go('/reset-password?email=${Uri.encodeComponent(widget.email)}');
             } else {
               context.pop(true);
             }
@@ -84,17 +84,17 @@ class _OtpScreenState extends State<OtpScreen> {
                 Text('Chúng tôi đã gửi mã 6 chữ số đến\n${widget.email}', style: const TextStyle(fontSize: 14, color: AppColors.muted)),
                 const SizedBox(height: 24),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (i) {
-                    return Container(
-                      width: 48, height: 56, margin: const EdgeInsets.symmetric(horizontal: 5),
+                    return SizedBox(
+                      width: 40, height: 56,
                       child: TextField(
                         controller: _controllers[i], focusNode: _focusNodes[i],
                         keyboardType: TextInputType.number, maxLength: 1, textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                         decoration: InputDecoration(
                           counterText: '', fillColor: AppColors.green50, filled: true,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                         ),
                         onChanged: (v) => _onDigitChanged(i, v),
                       ),

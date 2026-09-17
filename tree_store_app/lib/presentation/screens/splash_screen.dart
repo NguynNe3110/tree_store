@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen>
           final p1 = Curves.easeInCubic.transform(_seg(_c, 0, _p1End));
           final p2 = _seg(_c, _p1End, _p2End);
           final p3 = Curves.easeOutCubic.transform(_seg(_c, _p2End, _p3End));
-          final circleSize = 64 + p1 * diagonal;
+          final circleSize = 256 + p1 * diagonal;
 
           return Stack(
             children: [
