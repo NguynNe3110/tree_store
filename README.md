@@ -1,6 +1,6 @@
 ﻿<!-- filepath: D:/AppData/Code/Project/Android/tree_store/README.md -->
 
-<h1 align="center">🌲 Tree Store - Fullstack Plant & Tree E-commerce</h1>
+<h1 align="center">Tree Store - Fullstack Plant & Tree E-commerce</h1>
 
 <p align="center">
   <a href="https://flutter.dev" target="_blank"><img src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=flat&logo=Flutter&logoColor=white" alt="Flutter"></a>
