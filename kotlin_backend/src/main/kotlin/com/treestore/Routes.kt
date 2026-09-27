@@ -981,13 +981,13 @@ fun Route.adminSduiRoutes() {
             val blocks = transaction {
                 UiBlocks.selectAll().where { UiBlocks.screenKey eq screenKey }
                     .orderBy(UiBlocks.sortOrder to SortOrder.ASC).map { row ->
-                        mapOf(
-                            "id" to row[UiBlocks.id].toString(),
-                            "blockType" to row[UiBlocks.blockType],
-                            "title" to row[UiBlocks.title],
-                            "payload" to row[UiBlocks.payload],
-                            "sortOrder" to row[UiBlocks.sortOrder],
-                            "isActive" to row[UiBlocks.isActive]
+                        AdminUiBlockDto(
+                            id = row[UiBlocks.id].toString(),
+                            blockType = row[UiBlocks.blockType],
+                            title = row[UiBlocks.title],
+                            payload = row[UiBlocks.payload],
+                            sortOrder = row[UiBlocks.sortOrder],
+                            isActive = row[UiBlocks.isActive]
                         )
                     }
             }

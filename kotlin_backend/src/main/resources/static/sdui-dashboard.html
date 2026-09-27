@@ -7,8 +7,10 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
-.header{background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+.header{background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .header h1{font-size:20px;font-weight:700}
+.auth-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.15);padding:6px 12px;border-radius:8px}
+.auth-bar input{padding:4px 8px;border:none;border-radius:4px;font-size:12px;width:100px}
 .container{max-width:960px;margin:24px auto;padding:0 16px}
 .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -16,6 +18,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .badge.inactive{background:#ffebee;color:#c62828}
 .btn{padding:6px 14px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
 .btn-primary{background:#2e7d32;color:#fff}
+.btn-secondary{background:#e0e0e0;color:#333}
 .btn-danger{background:#c62828;color:#fff}
 .btn-sm{padding:4px 10px;font-size:12px}
 textarea{width:100%;min-height:120px;padding:8px;border:1px solid #ddd;border-radius:6px;font-family:monospace;font-size:13px;resize:vertical}
@@ -23,9 +26,9 @@ input,select{padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:
 .form-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
 .form-row label{font-size:13px;font-weight:600;min-width:80px}
 .actions{display:flex;gap:6px}
-.msg{padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px;display:none}
-.msg.ok{display:block;background:#e8f5e9;color:#2e7d32}
-.msg.err{display:block;background:#ffebee;color:#c62828}
+.msg{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;line-height:1.5;display:none}
+.msg.ok{display:block;background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.msg.err{display:block;background:#ffebee;color:#c62828;border:1px solid #ffcdd2}
 .toggle{position:relative;width:40px;height:22px;cursor:pointer}
 .toggle input{opacity:0;width:0;height:0}
 .toggle .slider{position:absolute;inset:0;background:#ccc;border-radius:22px;transition:.2s}
@@ -36,11 +39,21 @@ input,select{padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:
 </head>
 <body>
 <div class="header">
-<h1>Verdant SDUI Dashboard</h1>
-<button class="btn btn-primary" onclick="showAddForm()">+ Add Block</button>
+  <h1>Verdant SDUI Dashboard</h1>
+  <div class="auth-bar">
+    <span style="font-size:12px">Server:</span>
+    <input id="serverHost" value="http://localhost:8081" style="width:140px" placeholder="Server URL">
+    <span style="font-size:12px;margin-left:4px">Admin:</span>
+    <input id="authUser" value="admin" placeholder="User">
+    <input id="authPass" type="password" value="admin" placeholder="Pass">
+    <button class="btn btn-secondary btn-sm" onclick="saveAuthAndLoad()">Reload</button>
+  </div>
+  <button class="btn btn-primary" onclick="showAddForm()">+ Add Block</button>
 </div>
+
 <div class="container">
 <div id="msg" class="msg"></div>
+
 <div id="addForm" class="card" style="display:none">
 <h3 style="margin-bottom:12px;font-size:15px">New Block</h3>
 <div class="form-row"><label>Type</label><select id="newType"><option>banner_carousel</option><option>quick_actions</option><option>flash_sale_strip</option><option>featured_hero</option><option>category_tabs</option><option>product_horizontal_list</option><option>care_tip_card</option><option>product_grid</option><option>bundle_offer</option><option>testimonial</option></select></div>
@@ -53,77 +66,216 @@ input,select{padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:
 <button class="btn" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
 </div>
 </div>
+
 <div id="blocks"></div>
 </div>
+
 <script>
-const API='/api/admin/sdui';
 let blocks=[];
-let authUser='',authPass='';
-function authHeaders(){return authUser?{'Authorization':'Basic '+btoa(authUser+':'+authPass)}:{}}
-function ensureAuth(){if(!authUser){authUser=prompt('Admin username:')||'';authPass=prompt('Admin password:')||''}}
-function showMsg(t,ok){const m=document.getElementById('msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');setTimeout(()=>m.className='msg',3000)}
-async function load(){
-ensureAuth();
-try{const r=await fetch(API+'?screenKey=home',{headers:authHeaders()});blocks=await r.json();render()}
-catch(e){showMsg('Failed to load: '+e.message,false)}
+
+function getHost() {
+  const custom = document.getElementById('serverHost').value.trim();
+  if (custom) return custom.replace(/\/$/, '');
+  if (window.location.protocol === 'file:' || window.location.port !== '8081') {
+    return 'http://localhost:8081';
+  }
+  return window.location.origin;
 }
-function render(){
-const c=document.getElementById('blocks');
-if(!blocks.length){c.innerHTML='<p style="text-align:center;color:#999;padding:40px">No blocks yet. Click "+ Add Block" to create one.</p>';return}
-c.innerHTML=blocks.map(b=>`
-<div class="card" id="card-${b.id}">
-<div class="card-header">
-<div><span class="badge ${b.isActive?'':'inactive'}">${b.blockType}</span>
-<strong style="margin-left:8px">${b.title||'(no title)'}</strong>
-<span style="color:#999;font-size:12px;margin-left:8px">order: ${b.sortOrder}</span></div>
-<div class="actions">
-<label class="toggle"><input type="checkbox" ${b.isActive?'checked':''} onchange="toggleActive('${b.id}',this.checked)"><span class="slider"></span></label>
-<button class="btn btn-danger btn-sm" onclick="del('${b.id}')">Delete</button>
-</div></div>
-<textarea id="payload-${b.id}">${typeof b.payload==='string'?b.payload:JSON.stringify(b.payload,null,2)}</textarea>
-<div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-<input id="title-${b.id}" value="${b.title||''}" placeholder="Title" style="flex:1">
-<input id="sort-${b.id}" type="number" value="${b.sortOrder}" style="width:60px" title="Sort order">
-<button class="btn btn-primary btn-sm" onclick="save('${b.id}')">Save</button>
-</div></div>`).join('')
+
+function getApiUrl(path = '') {
+  return getHost() + '/api/admin/sdui' + path;
 }
-function showAddForm(){document.getElementById('addForm').style.display='block'}
-async function createBlock(){
-const body={blockType:document.getElementById('newType').value,title:document.getElementById('newTitle').value||null,payload:document.getElementById('newPayload').value,sortOrder:parseInt(document.getElementById('newSort').value)||0,isActive:true};
-try{
-JSON.parse(body.payload);
-}catch(e){showMsg('Invalid JSON payload',false);return}
-try{
-const r=await fetch(API,{method:'POST',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
-if(r.ok){showMsg('Block created',true);document.getElementById('addForm').style.display='none';load()}
-else{const e=await r.json();showMsg(e.message||'Error',false)}
-}catch(e){showMsg(e.message,false)}
+
+function authHeaders() {
+  const u = document.getElementById('authUser').value.trim() || 'admin';
+  const p = document.getElementById('authPass').value.trim() || 'admin';
+  return {'Authorization': 'Basic ' + btoa(u + ':' + p)};
 }
-async function save(id){
-const payload=document.getElementById('payload-'+id).value;
-try{JSON.parse(payload)}catch(e){showMsg('Invalid JSON',false);return}
-const b=blocks.find(x=>x.id===id);
-const body={blockType:b.blockType,title:document.getElementById('title-'+id).value||null,payload,sortOrder:parseInt(document.getElementById('sort-'+id).value)||0,isActive:b.isActive};
-try{
-const r=await fetch(API+'/'+id,{method:'PUT',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});
-if(r.ok){showMsg('Saved',true);load()}
-else{const e=await r.json();showMsg(e.message||'Error',false)}
-}catch(e){showMsg(e.message,false)}
+
+function showMsg(t, ok) {
+  const m = document.getElementById('msg');
+  m.innerHTML = t;
+  m.className = 'msg ' + (ok ? 'ok' : 'err');
 }
-async function del(id){
-if(!confirm('Delete this block?'))return;
-try{
-const r=await fetch(API+'/'+id,{method:'DELETE',headers:authHeaders()});
-if(r.ok){showMsg('Deleted',true);load()}
-else showMsg('Error',false)
-}catch(e){showMsg(e.message,false)}
+
+function saveAuthAndLoad() {
+  localStorage.setItem('sdui_host', document.getElementById('serverHost').value);
+  localStorage.setItem('sdui_user', document.getElementById('authUser').value);
+  localStorage.setItem('sdui_pass', document.getElementById('authPass').value);
+  load();
 }
-async function toggleActive(id,active){
-const b=blocks.find(x=>x.id===id);
-const body={blockType:b.blockType,title:b.title,payload:typeof b.payload==='string'?b.payload:JSON.stringify(b.payload),sortOrder:b.sortOrder,isActive:active};
-try{await fetch(API+'/'+id,{method:'PUT',headers:{...authHeaders(),'Content-Type':'application/json'},body:JSON.stringify(body)});load()}
-catch(e){showMsg(e.message,false)}
+
+function initAuth() {
+  if (localStorage.getItem('sdui_host')) document.getElementById('serverHost').value = localStorage.getItem('sdui_host');
+  if (localStorage.getItem('sdui_user')) document.getElementById('authUser').value = localStorage.getItem('sdui_user');
+  if (localStorage.getItem('sdui_pass')) document.getElementById('authPass').value = localStorage.getItem('sdui_pass');
 }
+
+async function load() {
+  const url = getApiUrl('?screenKey=home');
+  try {
+    const r = await fetch(url, { headers: authHeaders() });
+    if (r.status === 401) {
+      showMsg('❌ <b>Lỗi xác thực (401 Unauthorized):</b> Sai tài khoản/mật khẩu Admin. Mặc định là <code>admin</code> / <code>admin</code>.', false);
+      return;
+    }
+    if (!r.ok) {
+      showMsg('❌ <b>Lỗi Server (' + r.status + '):</b> Không thể tải danh sách block.', false);
+      return;
+    }
+    blocks = await r.json();
+    showMsg('✅ Kết nối Backend thành công (' + blocks.length + ' blocks)', true);
+    setTimeout(() => { document.getElementById('msg').className = 'msg'; }, 3000);
+    render();
+  } catch(e) {
+    showMsg(`❌ <b>Lỗi kết nối Server (${e.message}):</b><br>
+    - Đảm bảo Backend Ktor đang chạy (gõ <code>.\\gradlew.bat run</code> trong thư mục <code>kotlin_backend</code>).<br>
+    - Đảm bảo mở đúng URL: <b><a href="http://localhost:8081/sdui-dashboard.html" target="_blank">http://localhost:8081/sdui-dashboard.html</a></b> (không mở từ file:// hoặc Live Server).`, false);
+  }
+}
+
+function render() {
+  const c = document.getElementById('blocks');
+  if (!blocks.length) {
+    c.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No blocks yet. Click "+ Add Block" to create one.</p>';
+    return;
+  }
+  c.innerHTML = blocks.map(b => `
+  <div class="card" id="card-${b.id}">
+    <div class="card-header">
+      <div>
+        <span class="badge ${b.isActive ? '' : 'inactive'}">${b.blockType}</span>
+        <strong style="margin-left:8px">${b.title || '(no title)'}</strong>
+        <span style="color:#999;font-size:12px;margin-left:8px">order: ${b.sortOrder}</span>
+      </div>
+      <div class="actions">
+        <label class="toggle"><input type="checkbox" ${b.isActive ? 'checked' : ''} onchange="toggleActive('${b.id}',this.checked)"><span class="slider"></span></label>
+        <button class="btn btn-danger btn-sm" onclick="del('${b.id}')">Delete</button>
+      </div>
+    </div>
+    <textarea id="payload-${b.id}">${typeof b.payload === 'string' ? b.payload : JSON.stringify(b.payload, null, 2)}</textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <input id="title-${b.id}" value="${b.title || ''}" placeholder="Title" style="flex:1">
+      <input id="sort-${b.id}" type="number" value="${b.sortOrder}" style="width:60px" title="Sort order">
+      <button class="btn btn-primary btn-sm" onclick="save('${b.id}')">Save</button>
+    </div>
+  </div>`).join('');
+}
+
+function showAddForm() {
+  document.getElementById('addForm').style.display = 'block';
+}
+
+async function createBlock() {
+  const payloadStr = document.getElementById('newPayload').value;
+  try {
+    JSON.parse(payloadStr);
+  } catch(e) {
+    showMsg('❌ Payload JSON không hợp lệ!', false);
+    return;
+  }
+
+  const body = {
+    blockType: document.getElementById('newType').value,
+    title: document.getElementById('newTitle').value || null,
+    payload: payloadStr,
+    sortOrder: parseInt(document.getElementById('newSort').value) || 0,
+    isActive: true
+  };
+
+  try {
+    const r = await fetch(getApiUrl(), {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      showMsg('✅ Block created successfully!', true);
+      document.getElementById('addForm').style.display = 'none';
+      load();
+    } else {
+      const e = await r.json().catch(() => ({}));
+      showMsg('❌ Lỗi khi tạo block: ' + (e.message || r.statusText), false);
+    }
+  } catch(e) {
+    showMsg('❌ Lỗi kết nối: ' + e.message, false);
+  }
+}
+
+async function save(id) {
+  const payload = document.getElementById('payload-' + id).value;
+  try {
+    JSON.parse(payload);
+  } catch(e) {
+    showMsg('❌ Payload JSON không hợp lệ!', false);
+    return;
+  }
+
+  const b = blocks.find(x => x.id === id);
+  const body = {
+    blockType: b.blockType,
+    title: document.getElementById('title-' + id).value || null,
+    payload: payload,
+    sortOrder: parseInt(document.getElementById('sort-' + id).value) || 0,
+    isActive: b.isActive
+  };
+
+  try {
+    const r = await fetch(getApiUrl('/' + id), {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      showMsg('✅ Saved successfully!', true);
+      load();
+    } else {
+      const e = await r.json().catch(() => ({}));
+      showMsg('❌ Lỗi khi lưu: ' + (e.message || r.statusText), false);
+    }
+  } catch(e) {
+    showMsg('❌ Lỗi kết nối: ' + e.message, false);
+  }
+}
+
+async function del(id) {
+  if (!confirm('Xóa block này?')) return;
+  try {
+    const r = await fetch(getApiUrl('/' + id), {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+    if (r.ok) {
+      showMsg('✅ Deleted successfully!', true);
+      load();
+    } else showMsg('❌ Lỗi khi xóa block', false);
+  } catch(e) {
+    showMsg('❌ Lỗi kết nối: ' + e.message, false);
+  }
+}
+
+async function toggleActive(id, active) {
+  const b = blocks.find(x => x.id === id);
+  const body = {
+    blockType: b.blockType,
+    title: b.title,
+    payload: typeof b.payload === 'string' ? b.payload : JSON.stringify(b.payload),
+    sortOrder: b.sortOrder,
+    isActive: active
+  };
+  try {
+    await fetch(getApiUrl('/' + id), {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    load();
+  } catch(e) {
+    showMsg('❌ Lỗi kết nối: ' + e.message, false);
+  }
+}
+
+initAuth();
 load();
 </script>
 </body>

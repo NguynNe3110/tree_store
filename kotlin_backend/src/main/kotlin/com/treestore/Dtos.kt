@@ -192,6 +192,16 @@ data class UiBlockUpsertRequest(
 )
 
 @Serializable
+data class AdminUiBlockDto(
+    val id: String,
+    val blockType: String,
+    val title: String? = null,
+    val payload: String = "{}",
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true
+)
+
+@Serializable
 data class ApiError(val message: String)
 
 @Serializable

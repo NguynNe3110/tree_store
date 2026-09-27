@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -134,41 +134,151 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ponytail: minimal SDUI widgets matching HTML mockup structure. upgrade to dedicated widget files when sections grow complex
 
-class _BannerCarousel extends StatelessWidget {
+class _BannerCarousel extends StatefulWidget {
   final UiBlockResponse block;
   final Function(Map<String, dynamic>?) onAction;
   const _BannerCarousel(this.block, {required this.onAction});
 
   @override
+  State<_BannerCarousel> createState() => _BannerCarouselState();
+}
+
+class _BannerCarouselState extends State<_BannerCarousel> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  static const _gradients = [
+    [AppColors.green700, AppColors.green600],
+    [Color(0xFF1E3A2F), Color(0xFF2D5A46)],
+    [Color(0xFF2C5E3B), Color(0xFF4A7C59)],
+    [Color(0xFF3B6E47), Color(0xFF5B8E67)],
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    final banners = (block.payload['banners'] as List<dynamic>?) ?? [];
+    final banners = (widget.block.payload['banners'] as List<dynamic>?) ?? [];
     if (banners.isEmpty) return const SizedBox.shrink();
-    final b = banners.first as Map<String, dynamic>;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: GestureDetector(
-        onTap: () => onAction(block.action),
-        child: Container(
-          height: 140,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [AppColors.green700, AppColors.green600]),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (b['tag'] != null)
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(4)), child: Text(b['tag'], style: const TextStyle(fontSize: 10, color: Colors.white, fontFamily: 'monospace'))),
-              Text(b['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 2),
-              Text(b['subtitle'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-              if (b['cta'] != null)
-                Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)), child: Text(b['cta'], style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.green700))),
-            ],
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 150,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: banners.length,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (context, index) {
+              final b = banners[index] as Map<String, dynamic>;
+              final grad = _gradients[index % _gradients.length];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: GestureDetector(
+                  onTap: () => widget.onAction(b['action'] as Map<String, dynamic>? ?? widget.block.action),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: grad,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: grad.first.withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (b['tag'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              b['tag'].toString(),
+                              style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                            ),
+                          ),
+                        Text(
+                          b['title']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                b['subtitle']?.toString() ?? '',
+                                style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (b['cta'] != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  b['cta'].toString(),
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: grad.first),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-      ),
+        if (banners.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              banners.length,
+              (i) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: _currentPage == i ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: _currentPage == i ? AppColors.green700 : AppColors.line2,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -10,7 +10,10 @@ import io.ktor.server.auth.basic
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.statuspages.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.server.response.*
 import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
@@ -46,6 +49,18 @@ fun Application.module() {
         )
     )
     val paymentPublicBaseUrl = environment.config.property("payment.publicBaseUrl").getString()
+
+    install(CORS) {
+        anyHost()
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.AccessControlAllowOrigin)
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+    }
 
     install(ContentNegotiation) {
         json(Json {
