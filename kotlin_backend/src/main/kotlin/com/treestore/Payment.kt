@@ -76,27 +76,33 @@ class PayOsProvider(
         returnUrl: String,
         cancelUrl: String
     ): CreatedPayment {
+        val desc = description.replace(Regex("[^a-zA-Z0-9 ]"), " ").trim().take(25).ifBlank { "TreeStore" }
+        val signData = "amount=$amount&cancelUrl=$cancelUrl&description=$desc&orderCode=$orderCode&returnUrl=$returnUrl"
+        val signature = hmacSha256(checksumSecret, signData)
         val payload = buildJsonObject {
-            put("amount", amount)
-            put("appId", clientId)
             put("orderCode", orderCode)
-            put("orderDescription", description.take(25))
-            put("browserLanguage", "vn")
+            put("amount", amount)
+            put("description", desc)
             put("returnUrl", returnUrl)
             put("cancelUrl", cancelUrl)
+            put("signature", signature)
         }.toString()
         val request = HttpRequest.newBuilder()
             .uri(URI.create("$baseUrl/v2/payment-requests"))
             .timeout(Duration.ofSeconds(15))
             .header("Content-Type", "application/json")
-            .header("apikey", clientId)
-            .header("signature", hmacSha256(checksumSecret, payload))
+            .header("x-client-id", clientId)
+            .header("x-api-key", secretKey)
             .POST(HttpRequest.BodyPublishers.ofString(payload))
             .build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
         val root = json.parseToJsonElement(response.body()).jsonObject
         if (response.statusCode() !in 200..299 || root["data"] == null) {
-            throw IllegalStateException("PayOS create failed ${response.statusCode()}: ${root["msg"] ?: response.body()}")
+            val errMsg = root["desc"]?.jsonPrimitive?.contentOrNull
+                ?: root["message"]?.jsonPrimitive?.contentOrNull
+                ?: root["msg"]?.jsonPrimitive?.contentOrNull
+                ?: response.body()
+            throw IllegalStateException("PayOS create failed ${response.statusCode()}: $errMsg")
         }
         val data = root["data"]!!.jsonObject
         return CreatedPayment(
@@ -108,17 +114,37 @@ class PayOsProvider(
 
     override fun verifyWebhook(body: String, signature: String?): WebhookResult {
         val invalid = WebhookResult(false, false, null, null, null, 0, body)
-        if (signature == null || !secureCompare(hmacSha512(secretKey, body), signature)) return invalid
-        val data = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject ?: return invalid
+        val root = try {
+            json.parseToJsonElement(body).jsonObject
+        } catch (_: Exception) {
+            return invalid
+        }
+        val sig = signature ?: root["signature"]?.jsonPrimitive?.contentOrNull
+        val data = root["data"]?.jsonObject ?: return invalid
         val orderCode = data["orderCode"]?.jsonPrimitive?.longOrNull ?: return invalid
+
+        // PayOS v2: HMAC-SHA256 on alphabetically sorted keys of data
+        val sortedData = data.entries
+            .filter { (k, _) -> k != "signature" }
+            .sortedBy { it.key }
+            .joinToString("&") { (k, v) ->
+                val strVal = if (v is JsonPrimitive) v.content else v.toString()
+                "$k=$strVal"
+            }
+        val payosSig = hmacSha256(checksumSecret, sortedData)
+        val legacySig = hmacSha512(secretKey, body)
+
+        val isSigValid = sig != null && (secureCompare(payosSig, sig) || secureCompare(legacySig, sig))
+        if (!isSigValid) return invalid
+
         val payments = data["payments"]?.jsonArray?.firstOrNull()?.jsonObject
         return WebhookResult(
             verified = true,
-            success = data["code"]?.jsonPrimitive?.contentOrNull == "00" &&
+            success = (data["code"]?.jsonPrimitive?.contentOrNull ?: root["code"]?.jsonPrimitive?.contentOrNull) == "00" &&
                 (payments?.get("businessResult")?.jsonPrimitive?.contentOrNull ?: "OK") == "OK",
             orderCode = orderCode,
-            transactionNo = payments?.get("outTransactionId")?.jsonPrimitive?.contentOrNull,
-            providerPaymentId = data["id"]?.jsonPrimitive?.contentOrNull,
+            transactionNo = payments?.get("outTransactionId")?.jsonPrimitive?.contentOrNull ?: data["reference"]?.jsonPrimitive?.contentOrNull,
+            providerPaymentId = (data["paymentLinkId"] ?: data["id"])?.jsonPrimitive?.contentOrNull,
             amount = data["amount"]?.jsonPrimitive?.long ?: 0,
             raw = body
         )

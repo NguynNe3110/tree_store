@@ -428,8 +428,8 @@ fun Route.paymentRoutes(providers: Map<String, PaymentProvider>, publicBaseUrl: 
                     orderCode = orderCode,
                     amount = amount,
                     description = "TreeStore ${orderId}".take(25),
-                    returnUrl = "$publicBaseUrl/api/payments/done",
-                    cancelUrl = "$publicBaseUrl/api/payments/cancel"
+                    returnUrl = "$publicBaseUrl/api/payments/done?orderId=$orderId",
+                    cancelUrl = "$publicBaseUrl/api/payments/cancel?orderId=$orderId"
                 )
                 val paymentId = UUID.randomUUID()
                 transaction {
@@ -453,7 +453,8 @@ fun Route.paymentRoutes(providers: Map<String, PaymentProvider>, publicBaseUrl: 
                 call.respond(HttpStatusCode.Created, CreatePaymentResponseDto(paymentId.toString(), created.orderCode, created.checkoutUrl))
             } catch (e: Exception) {
                 call.application.log.error("Payment create failed", e)
-                call.respond(HttpStatusCode.BadGateway, ApiError("Gateway error: ${e.localizedMessage}"))
+                val msg = e.localizedMessage ?: e.cause?.localizedMessage ?: e.javaClass.simpleName
+                call.respond(HttpStatusCode.BadGateway, ApiError("Gateway error: $msg"))
             }
         }
     }
@@ -517,14 +518,78 @@ fun Route.paymentRoutes(providers: Map<String, PaymentProvider>, publicBaseUrl: 
             call.respondText(provider.webhookAckBody, ContentType.Application.Json)
         }
         get("/done", { summary = "Landing page after successful gateway checkout (app polls order status)" }) {
+            val orderId = call.request.queryParameters["orderId"] ?: ""
+            val deepLink = if (orderId.isNotBlank()) "treestore://order-success?id=$orderId&paid=1" else "treestore://orders"
             call.respondText(
-                "<html><body style='font-family:sans-serif;text-align:center;padding-top:48px'><h2>✅ Thanh toán thành công</h2><p>Bạn có thể quay lại ứng dụng.</p></body></html>",
+                """
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Thanh toán thành công</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9f8; color: #2d3748; }
+                        .card { background: white; border-radius: 16px; padding: 32px 24px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                        .icon { font-size: 64px; margin-bottom: 16px; }
+                        h2 { color: #22543d; margin: 0 0 12px 0; }
+                        p { color: #718096; font-size: 15px; line-height: 1.5; margin: 0 0 24px 0; }
+                        .btn { display: inline-block; background-color: #2f855a; color: white; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 16px; transition: background 0.2s; }
+                        .btn:hover { background-color: #276749; }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <div class="icon">✅</div>
+                        <h2>Thanh toán thành công!</h2>
+                        <p>Đang tự động chuyển hướng về ứng dụng TreeStore...</p>
+                        <a href="$deepLink" class="btn">Mở ứng dụng TreeStore</a>
+                    </div>
+                    <script>
+                        setTimeout(function() {
+                            window.location.href = "$deepLink";
+                        }, 800);
+                    </script>
+                </body>
+                </html>
+                """.trimIndent(),
                 ContentType.Text.Html
             )
         }
         get("/cancel", { summary = "Landing page when user cancels gateway checkout" }) {
+            val deepLink = "treestore://orders"
             call.respondText(
-                "<html><body style='font-family:sans-serif;text-align:center;padding-top:48px'><h2>❌ Đã hủy thanh toán</h2><p>Quay lại ứng dụng để thử lại.</p></body></html>",
+                """
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Đã hủy thanh toán</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9f8; color: #2d3748; }
+                        .card { background: white; border-radius: 16px; padding: 32px 24px; max-width: 400px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+                        .icon { font-size: 64px; margin-bottom: 16px; }
+                        h2 { color: #c53030; margin: 0 0 12px 0; }
+                        p { color: #718096; font-size: 15px; line-height: 1.5; margin: 0 0 24px 0; }
+                        .btn { display: inline-block; background-color: #4a5568; color: white; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <div class="icon">❌</div>
+                        <h2>Đã hủy thanh toán</h2>
+                        <p>Bạn đã hủy giao dịch. Nhấn bên dưới để quay lại ứng dụng.</p>
+                        <a href="$deepLink" class="btn">Quay lại ứng dụng</a>
+                    </div>
+                    <script>
+                        setTimeout(function() {
+                            window.location.href = "$deepLink";
+                        }, 1000);
+                    </script>
+                </body>
+                </html>
+                """.trimIndent(),
                 ContentType.Text.Html
             )
         }

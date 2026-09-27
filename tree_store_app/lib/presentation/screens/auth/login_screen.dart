@@ -42,7 +42,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     gradient: LinearGradient(colors: [AppColors.green700, AppColors.green600], begin: Alignment.topCenter, end: Alignment.bottomCenter),
                     borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
                   ),
-                  child: const Center(child: Text('🌱 Verdant', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white))),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/images/verdant_logo_concept.png',
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('Verdant', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                      ],
+                    ),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(24),

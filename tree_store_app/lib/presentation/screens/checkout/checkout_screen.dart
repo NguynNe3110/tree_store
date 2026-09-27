@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/image_url.dart';
@@ -135,13 +136,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _startGatewayPayment(state.order.id);
             }
           } else if (state is PaymentReady) {
-            await context.push('/pay-webview', extra: {
-              'orderId': state.orderId,
-              'url': state.checkoutUrl,
-            });
-            if (!context.mounted) return;
             setState(() => _isProcessingPayment = true);
             context.read<OrderBloc>().add(OrderWatchPayment(state.orderId));
+            final uri = Uri.parse(state.checkoutUrl);
+            try {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } catch (_) {
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            }
           } else if (state is PaymentPaid) {
             if (!context.mounted) return;
             context.go('/order-success?id=${state.order.id}&paid=1');
@@ -162,14 +166,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         builder: (context, orderState) {
           if (_isProcessingPayment) {
             return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 20),
-                  Text('Đang xử lý thanh toán...', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.green700)),
-                  Text('Vui lòng không thoát ứng dụng', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: AppColors.green700),
+                    const SizedBox(height: 24),
+                    const Text('Đang mở trang thanh toán...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.green700)),
+                    const SizedBox(height: 8),
+                    const Text('Vui lòng hoàn tất thanh toán trên trình duyệt web.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                    const SizedBox(height: 24),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Xem danh sách đơn hàng'),
+                      onPressed: () {
+                        setState(() => _isProcessingPayment = false);
+                        context.go('/orders');
+                      },
+                    ),
+                  ],
+                ),
               ),
             );
           }
